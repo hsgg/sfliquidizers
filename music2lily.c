@@ -7,6 +7,25 @@
 
 
 
+void write_to_file(char *filename, sf_count_t len, double *values)
+{
+    sf_count_t i = 0;
+    FILE *file = fopen(filename, "w");
+
+    if (!file) {
+	printf("Could not open %s for writing.\n", filename);
+	exit(2);
+    }
+
+    for (i = 0; i < len; i++) {
+	fprintf(file, "%lld\t%lf\n", i, values[i]);
+    }
+
+    fclose(file);
+}
+
+
+
 int main (int argc, char *argv[])
 {
     int status = 0;
@@ -50,10 +69,12 @@ int main (int argc, char *argv[])
     }
 
     /* read music */
-    music = mymalloc(wavinfo.samplerate * sizeof(double));
+    setsize = 8.5 * wavinfo.samplerate;
+    music = mymalloc(setsize * sizeof(double));
     frames = sf_readf_double(file, music, setsize);
 
     /* save values */
+    write_to_file("data.dat", frames, music);
 
 
 
