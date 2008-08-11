@@ -3,7 +3,7 @@ CFLAGS = -g -Wall
 LDFLAGS = -lsndfile
 
 
-HDR_C =
+HDR_C = libc.h
 SRC_C = music2lily.c \
 	$(HDR_C:.h=.c)
 
@@ -11,8 +11,8 @@ SRC = $(SRC_C)
 OBJ = $(SRC_C:.c=.o)
 PROG = music2lily
 
-DEPFILE = depend
-PROGDEPFILE = progdepend
+DEPFILE = .depend
+PROGDEPFILE = .progdepend
 
 
 # all
