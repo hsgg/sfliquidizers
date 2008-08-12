@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sndfile.h>
+#include <fftw3.h>
 
 #include "libc.h"
 
@@ -11,6 +12,8 @@ void write_to_file(char *filename, sf_count_t len, double *values)
 {
     sf_count_t i = 0;
     FILE *file = fopen(filename, "w");
+
+    printf("Writing to file %s...\n", filename);
 
     if (!file) {
 	printf("Could not open %s for writing.\n", filename);
@@ -31,9 +34,11 @@ int main (int argc, char *argv[])
     int status = 0;
     SNDFILE *file = NULL;
     SF_INFO wavinfo = {};
-    double *music = NULL;
     sf_count_t setsize = 0;
     sf_count_t frames = 0;
+    double *music = NULL;
+    fftw_complex *data = NULL;
+    fftw_plan plan;
 
     if (argc != 2) {
 	printf("Usage: %s <sndfile>\n", argv[0]);
@@ -77,9 +82,19 @@ int main (int argc, char *argv[])
     write_to_file("data.dat", frames, music);
 
 
+    /* initialize in and out, 'couse that's what a plan's all about */
+    printf("Creating a plan...\n");
+    data = fftw_malloc(setsize * sizeof(fftw_complex));
+    plan = fftw_plan_dft_1d(setsize, data, data, FFTW_FORWARD, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
 
 
-    /* close file */
+    printf("Executing the plan...\n");
+    fftw_execute(plan);
+
+
+    /* free resources, close files */
+    fftw_destroy_plan(plan);
+    fftw_free(data);
     if ((status = sf_close(file)) != 0) {
 	printf("Error closing file.\n");
 	exit(status);

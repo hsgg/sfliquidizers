@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall
-LDFLAGS = -lsndfile
+LDFLAGS = -lsndfile -lfftw3
 
 
 HDR_C = libc.h
