@@ -1,7 +1,9 @@
 /* vim: sts=4, sw=4 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <sndfile.h>
+#include <complex.h> /* must before fftw3.h */
 #include <fftw3.h>
 
 #include "libc.h"
@@ -13,7 +15,7 @@ void write_to_file(char *filename, sf_count_t len, double *values)
     sf_count_t i = 0;
     FILE *file = fopen(filename, "w");
 
-    printf("Writing to file %s...\n", filename);
+    printf("Writing to file \"%s\"...\n", filename);
 
     if (!file) {
 	printf("Could not open %s for writing.\n", filename);
@@ -32,6 +34,7 @@ void write_to_file(char *filename, sf_count_t len, double *values)
 int main (int argc, char *argv[])
 {
     int status = 0;
+    int i = 0;
     SNDFILE *file = NULL;
     SF_INFO wavinfo = {};
     sf_count_t setsize = 0;
@@ -39,6 +42,7 @@ int main (int argc, char *argv[])
     double *music = NULL;
     fftw_complex *data = NULL;
     fftw_plan plan;
+    double avgfreq = 0, mass = 0;
 
     if (argc != 2) {
 	printf("Usage: %s <sndfile>\n", argv[0]);
@@ -77,28 +81,57 @@ int main (int argc, char *argv[])
     setsize = 8.5 * wavinfo.samplerate;
     music = mymalloc(setsize * sizeof(double));
     frames = sf_readf_double(file, music, setsize);
+    if (frames != setsize) {
+	printf("Error: Impossible! setsize (%lld) = frames (%lld)\n", setsize, frames);
+	exit(3);
+    }
+
+    for (i = 0; i < setsize; i++)
+	music[i] = 0.1 * sin(i * 2.0 * M_PI / 44100.0) + sin(44.0 * i * 2.0 * M_PI / 44100.0);
 
     /* save values */
     write_to_file("data.dat", frames, music);
 
 
-    /* initialize in and out, 'couse that's what a plan's all about */
+    /* create data, 'couse that's what a plan's all about */
     printf("Creating a plan...\n");
     data = fftw_malloc(setsize * sizeof(fftw_complex));
-    plan = fftw_plan_dft_1d(setsize, data, data, FFTW_FORWARD, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
+    plan = fftw_plan_dft_1d(44100, data, data, FFTW_FORWARD, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
 
+    /* initialize */
+    printf("Initializing data...\n");
+    for (i = 0; i < setsize; i++)
+	data[i] = music[i];
 
+    /* fft */
     printf("Executing the plan...\n");
     fftw_execute(plan);
+
+    /* write fft */
+    printf("Taking absolute value...\n");
+    for (i = 0; i < setsize; i++)
+	music[i] = cabs(data[i]);
+    write_to_file("fft.dat", 50, music);
+
+    /* average frequency */
+    for (i = 0; i < 50; i++) {
+	avgfreq += music[i] * i;
+	mass += music[i];
+    }
+    avgfreq /= mass;
+    printf("Average frequency: %lf\n", avgfreq);
+
 
 
     /* free resources, close files */
     fftw_destroy_plan(plan);
     fftw_free(data);
+    fftw_cleanup();
     if ((status = sf_close(file)) != 0) {
 	printf("Error closing file.\n");
 	exit(status);
     }
+    free(music);
 
     return status;
 }
