@@ -1,1 +1,1 @@
-plot "fft.dat"
+plot "fft.dat" with lines
