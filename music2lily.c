@@ -39,6 +39,10 @@ void fft(double *music, int setsize, complex *freq, int freqsize)
     /* create data, 'couse that's what's a plan's all about */
     printf("Creating a plan...\n");
     data = fftw_malloc((setsize/2 + 1) * sizeof(fftw_complex));
+    if (!data) {
+	printf("Error: Could not allocate 'data'.\n");
+	exit(-1);
+    }
     plan = fftw_plan_dft_r2c_1d(setsize, music, data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
 
     /* fft */
@@ -47,8 +51,11 @@ void fft(double *music, int setsize, complex *freq, int freqsize)
 
     /* convert fft */
     printf("Copying result...\n");
-    for (i = 0; i < freqsize; i++)
+    for (i = 0; (i < freqsize) && (i < setsize/2 + 1); i++)
 	freq[i] = data[i];
+    while (i < freqsize) {
+	freq[i++] = 0.0;
+    }
 
     /* free */
     fftw_destroy_plan(plan);
@@ -69,7 +76,7 @@ int main (int argc, char *argv[])
     long long int frames = 0;
     long long int freqsize = 0;
     double *music = NULL;
-    double avgfreq = 0, mass = 0;
+    double avg = 0, mass = 0;
 
     if (argc != 2) {
 	printf("Usage: %s <sndfile>\n", argv[0]);
@@ -105,8 +112,8 @@ int main (int argc, char *argv[])
     }
 
     /* set sizes */
-    setsize = 8.200 * wavinfo.samplerate;
-    freqsize = 10000;
+    setsize = 0.1 * wavinfo.samplerate;
+    freqsize = 2000;
 
     /* read music */
     music = mymalloc(setsize * sizeof(double));
@@ -127,22 +134,62 @@ int main (int argc, char *argv[])
     write_to_file("data.dat", setsize, music, 1.0 / wavinfo.samplerate);
 
     complex *freq = mymalloc(freqsize * sizeof(complex));
+    double *afreq = mymalloc(freqsize * sizeof(double));
     fft(music, setsize, freq, freqsize);
 
     /* convert to real freqs */
     for (i = 0; i < freqsize; i++) {
-	music[i] = 1.0 / sqrt(setsize) * cabs(freq[i]);
+	afreq[i] = 1.0 / sqrt(setsize) * cabs(freq[i]);
     }
-    write_to_file("fft.dat", freqsize, music, (double)wavinfo.samplerate / setsize);
+    write_to_file("fft.dat", freqsize, afreq, (double)wavinfo.samplerate / setsize);
 
 
     /* frequency of maximum, average */
+    avg = 0.0;
+    mass = 0.0;
     for (i = 0; i < freqsize; i++) {
-	avgfreq += cabs(freq[i]) * i;
-	mass += cabs(freq[i]);
+	avg += afreq[i] * i * (double)wavinfo.samplerate / setsize;
+	mass += afreq[i];
     }
-    avgfreq /= mass;
-    printf("Average frequency: %lf\n", avgfreq);
+    avg /= mass;
+    printf("Average frequency: %lf\n", avg);
+
+    /* average intensity */
+    avg = 0.0;
+    mass = 0.0; // avg^2, really
+    for (i = 0; i < freqsize; i++) {
+	avg += afreq[i];
+	mass += afreq[i] * afreq[i];
+    }
+    avg /= freqsize;
+    mass /= freqsize;
+    double stddev = sqrt(mass - avg * avg);
+    printf("Average intensity: %lf\n", avg);
+    printf("Stddev: %lf\n", stddev);
+
+    /* above 2 * stddev */
+    i = 0;
+    while (i < freqsize) {
+	if (afreq[i] >= 2.0 * stddev)
+	    printf("Above 2 * stddev: %lf (%lf)\n", i * (double)wavinfo.samplerate / setsize, afreq[i]);
+	i++;
+    }
+
+    /* first maximum */
+    mass = 0.0;
+    i = 0;
+    while (i < freqsize) {
+	if (afreq[i] >= 2.0 * stddev) {
+	    printf("Next: %lf (%lf)\n", i * (double)wavinfo.samplerate / setsize, afreq[i]);
+	    if (afreq[i] > mass)
+		mass = afreq[i];
+	    else
+		break;
+	}
+	i++;
+    }
+    i--;
+    printf("First maximum: %lf (%lf)\n", i * (double)wavinfo.samplerate / setsize, afreq[i]);
 
 
 
@@ -152,6 +199,8 @@ int main (int argc, char *argv[])
 	exit(status);
     }
     free(music);
+    free(freq);
+    free(afreq);
 
     return status;
 }
