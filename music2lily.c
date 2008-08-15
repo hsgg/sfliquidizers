@@ -5,8 +5,6 @@
 #include <sndfile.h>
 #include <complex.h> /* must before fftw3.h */
 #include <fftw3.h>
-#include <gsl/gsl_complex_math.h>
-#include <gsl/gsl_multifit.h>
 
 #include "libc.h"
 
@@ -32,7 +30,7 @@ void write_to_file(char *filename, sf_count_t len, double *values)
 }
 
 
-void fft(double *music, int setsize)
+void fft(double *music, int setsize, complex *freq, int freqsize)
 {
     fftw_complex *data = NULL;
     fftw_plan plan;
@@ -53,9 +51,9 @@ void fft(double *music, int setsize)
     fftw_execute(plan);
 
     /* convert fft */
-    printf("Taking absolute value...\n");
-    for (i = 0; i < setsize; i++)
-	music[i] = cabs(data[i]);
+    printf("Copying result...\n");
+    for (i = 0; i < freqsize; i++)
+	freq[i] = data[i];
 
     /* free */
     fftw_destroy_plan(plan);
@@ -65,63 +63,11 @@ void fft(double *music, int setsize)
 
 
 
-void fit(double *music, int setsize, double *fita, int freqsize)
-{
-    /* allocate */
-    int i = 0, j = 0;
-    int skip = 10, off = 0;
-
-    printf("Allocating %d x %d = %d blocks.\n", setsize/skip + off, 2 * freqsize, setsize * 2 * freqsize);
-    gsl_matrix *X = gsl_matrix_alloc(setsize/skip + off, 2 * freqsize);
-    printf("Allocated X gsl matrix.\n");
-    gsl_vector *y = gsl_vector_alloc(setsize/skip + off);
-    gsl_vector *c = gsl_vector_alloc(2 * freqsize);
-    gsl_matrix *cov = gsl_matrix_alloc(2 * freqsize, 2 * freqsize);
-    double chisq = 0;
-    gsl_multifit_linear_workspace *ws = gsl_multifit_linear_alloc(
-	    setsize/skip + off, 2 * freqsize);
-
-    printf("Allocated all gsl tensors.\n");
-
-    /* setup */
-    double k = 2.0 * M_PI / 44100.0;
-    for (i = 0; i < setsize; i += skip) {
-	printf("Setting X_%d_%d...\n", i, j);
-	for (j = 0; j < freqsize; j++) {
-	    gsl_matrix_set(X, i/skip, j, sin(k * i * j));
-	    gsl_matrix_set(X, i/skip, j + freqsize, cos(k * i * j));
-	}
-	gsl_vector_set(y, i/skip, music[i]);
-    }
-
-    printf("Calculating fit...\n");
-
-    /* calc */
-    gsl_multifit_linear(X, y, c, cov, &chisq, ws);
-
-    printf("Chi^2 = %lf\n", chisq);
-
-    /* copy */
-    for (i = 0; i < freqsize; i++) {
-	fita[i] = gsl_vector_get(c, i);
-	fita[i + freqsize] = gsl_vector_get(c, i + freqsize);
-    }
-
-    /* free */
-    gsl_matrix_free(X);
-    gsl_vector_free(y);
-    gsl_vector_free(c);
-    gsl_matrix_free(cov);
-    gsl_multifit_linear_free(ws);
-}
-
-
-
 /****************** main ****************/
 int main (int argc, char *argv[])
 {
     int status = 0;
-    int i = 0, j = 0;
+    int i = 0;
     SNDFILE *file = NULL;
     SF_INFO wavinfo = {};
     long long int setsize = 0;
@@ -164,8 +110,8 @@ int main (int argc, char *argv[])
     }
 
     /* set sizes */
-    setsize = 0.5 * wavinfo.samplerate;
-    freqsize = 40; //setsize;
+    setsize = 0.1 * wavinfo.samplerate;
+    freqsize = 250; //setsize;
 
     /* read music */
     music = mymalloc(setsize * sizeof(double));
@@ -179,37 +125,26 @@ int main (int argc, char *argv[])
     //double sigma = 5050.0;
     //int center = 22050;
     for (i = 0; i < setsize; i++)
-	//music[i] = 0.1 * sin(12.0 * i * 2.0 * M_PI / 44100.0) + (exp(-((i-center)/sigma)*((i-center)/sigma))) * sin(44.0 * i * 2.0 * M_PI / 44100.0);
-	music[i] = 0.1 * sin(12.0 * i * 2.0 * M_PI / 44100.0);
+	music[i] = 0.1 * sin(220.0 * i * 2.0 * M_PI / 44100.0) + /*(exp(-((i-center)/sigma)*((i-center)/sigma))) */ sin(44.0 * i * 2.0 * M_PI / 44100.0);
+	//music[i] = 0.1 * sin(12.0 * i * 2.0 * M_PI / 44100.0);
 
     /* save values */
     write_to_file("data.dat", frames, music);
 
-    fft(music, setsize);
+    complex *freq = mymalloc(freqsize * sizeof(complex));
+    fft(music, setsize, freq, freqsize);
 
-    write_to_file("fft.dat", freqsize, music);
-
-    double *fita = mymalloc(2 * freqsize * sizeof(double));
-    fit(music, setsize, fita, freqsize);
-
-    write_to_file("fit.dat", 2 * freqsize, fita);
-
-    /* return */
-    for (i = 0; i < setsize; i++) {
-	music[i] = 0.0;
-	for (j = 0; j < freqsize; j++) {
-	    music[i] += fita[j] * sin(2.0 * M_PI / 44100.0 * i * j);
-	    music[i] += fita[j + freqsize] * cos(2.0 * M_PI / 44100.0 * i * j);
-	    printf("%d: %lf\n", i, music[i]);
-	}
+    /* convert to real freqs */
+    for (i = 0; i < freqsize; i++) {
+	music[i] = 1.0 / sqrt(setsize) * cabs(freq[i * setsize/44100]);
     }
-    write_to_file("rec.dat", setsize, music);
+    write_to_file("fft.dat", freqsize, music);
 
 
     /* frequency of maximum, average */
-    for (i = 0; i < setsize; i++) {
-	avgfreq += music[i] * i;
-	mass += music[i];
+    for (i = 0; i < freqsize; i++) {
+	avgfreq += cabs(freq[i]) * i;
+	mass += cabs(freq[i]);
     }
     avgfreq /= mass;
     printf("Average frequency: %lf\n", avgfreq);
