@@ -105,8 +105,8 @@ int main (int argc, char *argv[])
     }
 
     /* set sizes */
-    setsize = 0.200 * wavinfo.samplerate;
-    freqsize = 220; //setsize;
+    setsize = 8.200 * wavinfo.samplerate;
+    freqsize = 10000;
 
     /* read music */
     music = mymalloc(setsize * sizeof(double));
@@ -119,12 +119,12 @@ int main (int argc, char *argv[])
     /* initialize */
     //double sigma = 5050.0;
     //int center = 22050;
-    for (i = 0; i < setsize; i++)
-	music[i] = 1.0 * sin(656.0 * i * 2.0 * M_PI / wavinfo.samplerate) + /*(exp(-((i-center)/sigma)*((i-center)/sigma))) */ sin(440.0 * i * 2.0 * M_PI / wavinfo.samplerate);
+    //for (i = 0; i < setsize; i++)
+	//music[i] = 1.0 * sin(656.0 * i * 2.0 * M_PI / wavinfo.samplerate) + /*(exp(-((i-center)/sigma)*((i-center)/sigma))) */ sin(440.0 * i * 2.0 * M_PI / wavinfo.samplerate);
 	//music[i] = 0.1 * sin(12.0 * i * 2.0 * M_PI / wavinfo.samplerate);
 
     /* save values */
-    write_to_file("data.dat", frames, music, 1.0 / wavinfo.samplerate);
+    write_to_file("data.dat", setsize, music, 1.0 / wavinfo.samplerate);
 
     complex *freq = mymalloc(freqsize * sizeof(complex));
     fft(music, setsize, freq, freqsize);
@@ -133,7 +133,7 @@ int main (int argc, char *argv[])
     for (i = 0; i < freqsize; i++) {
 	music[i] = 1.0 / sqrt(setsize) * cabs(freq[i]);
     }
-    write_to_file("fft.dat", freqsize, music, wavinfo.samplerate / setsize);
+    write_to_file("fft.dat", freqsize, music, (double)wavinfo.samplerate / setsize);
 
 
     /* frequency of maximum, average */
