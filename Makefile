@@ -39,3 +39,7 @@ clean:
 	rm -f $(OBJ)
 	rm -f $(PROG)
 	rm -f $(DEPFILE) $(PROGDEPFILE)
+
+.PHONY: realclean
+realclean: clean
+	rm -f *.dat
