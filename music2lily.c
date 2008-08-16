@@ -2,11 +2,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <sndfile.h>
 #include <complex.h> /* must before fftw3.h */
 #include <fftw3.h>
 
 #include "libc.h"
+
+
+typedef struct {
+    double f;
+    double min;
+    double max;
+    char *note;
+} Freq2Note;
+
+
+void write_lilyhead(FILE *lilyfile,
+	char *name)
+{
+    fprintf(lilyfile, "\\version \"2.11.52\"\n");
+
+    fprintf(lilyfile, "\\header {\n");
+    fprintf(lilyfile, "  title = \"%s\"\n", name);
+    fprintf(lilyfile, "}\n\n");
+
+    fprintf(lilyfile, "\"music\" = {\n");
+}
+
+void write_lilytail(FILE *lilyfile)
+{
+    fprintf(lilyfile, "}\n\n");
+
+    fprintf(lilyfile, "%% Score\n");
+    fprintf(lilyfile, "\\score {\n");
+    fprintf(lilyfile, "  \\new Staff = \"Tenor\" {\n");
+    fprintf(lilyfile, "    \\clef alto\n");
+    fprintf(lilyfile, "    \\time 4/4\n");
+    fprintf(lilyfile, "    \\music\n");
+    fprintf(lilyfile, "  }\n\n");
+
+    fprintf(lilyfile, "  \\layout {\n");
+    fprintf(lilyfile, "  }\n\n");
+
+    fprintf(lilyfile, "  \\midi {\n");
+    fprintf(lilyfile, "  }\n");
+
+    fprintf(lilyfile, "}\n");
+}
 
 
 
@@ -165,6 +208,30 @@ double get_frequency(double *music, int setsize, double samplerate)
 
 
 
+char *get_note(double f)
+{
+    static char *note = NULL;
+    static Freq2Note fns[] = {
+	{ 438, 440, 442, "a'64" },
+	{ 480, 487, 491, "b'" },
+	{ 550, 555, 561, "cis''" },
+	{ 585, 587, 588, "d''" }
+    };
+    int i = sizeof(fns) / sizeof(Freq2Note);
+
+    while (i--) {
+	if ((fns[i].min < f) && (fns[i].max > f)) {
+	    note = fns[i].note;
+	    break;
+	}
+    }
+
+    /* If none is found, the last one will be used. */
+    return note;
+}
+
+
+
 /****************** main ****************/
 int main (int argc, char *argv[])
 {
@@ -175,20 +242,29 @@ int main (int argc, char *argv[])
     long long int setsize = 0;
     long long int frames = 0;
     double *music = NULL;
-    int numnotes = 0;
-    double *notes = NULL;
+    int numfreqs = 0;
+    double *freqs = NULL;
     double f;
+    char *note = NULL;
+    FILE *lilyfile = NULL;
 
-    if (argc != 2) {
-	printf("Usage: %s <sndfile>\n", argv[0]);
+
+    if (argc != 3) {
+	printf("Usage: %s <sndfile> <lilyfile>\n", argv[0]);
 	exit(1);
     }
 
     /* open file */
     file = sf_open(argv[1], SFM_READ, &wavinfo);
     if (!file) {
-	printf("Could not open file %s.\n", argv[1]);
+	printf("Could not open file \"%s\".\n", argv[1]);
 	exit(2);
+    }
+
+    lilyfile = fopen(argv[2], "w");
+    if (!lilyfile) {
+	printf("Could not open output file \"%s\".\n", argv[2]);
+	exit(5);
     }
 
     /* accounting data */
@@ -212,11 +288,13 @@ int main (int argc, char *argv[])
 	exit (3);
     }
 
+    write_lilyhead(lilyfile, argv[1]);
+
     /* set sizes */
     setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
     music = mymalloc(setsize * sizeof(double));
-    numnotes = wavinfo.frames / setsize + 1;
-    notes = mymalloc(numnotes * sizeof(double));
+    numfreqs = wavinfo.frames / setsize + 1;
+    freqs = mymalloc(numfreqs * sizeof(double));
 
     /* read music */
     i = 0;
@@ -229,13 +307,18 @@ int main (int argc, char *argv[])
 
 
 	f = get_frequency(music, frames, wavinfo.samplerate);
-	printf("i = %d (%lfsec), numnotes = %d\n", i, i * (double)setsize / wavinfo.samplerate, numnotes);
-	notes[i++] = f;
+	printf("i = %d (%lfsec), numfreqs = %d\n", i, i * (double)setsize / wavinfo.samplerate, numfreqs);
+	freqs[i++] = f;
 	printf("=================>>> Frequency is %lf.\n", f);
+	note = get_note(f);
+	printf("=================>>> Note is %s.\n", note);
+	fprintf(lilyfile, "%s ", note);
     }
 
-    write_to_file("notes.dat", numnotes, notes, (double)setsize / wavinfo.samplerate);
+    write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate);
 
+
+    write_lilytail(lilyfile);
 
     /* free resources, close files */
     if ((status = sf_close(file)) != 0) {
@@ -243,7 +326,8 @@ int main (int argc, char *argv[])
 	exit(status);
     }
     free(music);
-    free(notes);
+    free(freqs);
+    fclose(lilyfile);
 
     return status;
 }
