@@ -51,7 +51,7 @@ char *get_duration(int duration)
     static char *dur = NULL;
     static Freq2Note fns[] = {
 	{ 82, 92, 100, "2" },
-	{ 41, 46, 65, "4" },
+	{ 40, 46, 65, "4" },
 	{ 20, 23, 25, "8" },
 	{ 10, 11, 12, "16" },
 	{  5,  6,  6, "32" },
@@ -275,6 +275,51 @@ double get_frequency(double *music, int setsize, double samplerate)
 }
 
 
+
+void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_INFO wavinfo)
+{
+    SNDFILE *file = NULL;
+    int i, n;
+    int setsize = xfactor * wavinfo.samplerate;
+    double *synth = NULL;
+    double k = 2 * M_PI / wavinfo.samplerate;
+
+    printf("Synthesizing to file \"%s\"...\n", filename);
+
+    if (wavinfo.channels != 1) {
+	printf("Error: Number of channels must be 1, currently.\n");
+	exit(7);
+    }
+
+    /* alloc, open */
+    synth = mymalloc(setsize * sizeof(double));
+    file = sf_open(filename, SFM_WRITE, &wavinfo);
+    if (!file) {
+	printf("Could not open file \"%s\".\n", filename);
+	exit(2);
+    }
+
+    /* synthesize */
+    for (n = 0; n < numfreqs; n++) {
+	for (i = 0; i < setsize; i++) {
+	    synth[i] = 0.5 * sin(k * freqs[n] * i);
+	}
+	/* write to file */
+	if (sf_write_double(file, synth, setsize) != setsize) {
+	    printf("Couldn't write all frames! Don't know why.\n");
+	    exit(8);
+	}
+    }
+
+    /* free */
+    if (sf_close(file) != 0) {
+	printf("Error closing file.\n");
+	exit(9);
+    }
+    free(synth);
+}
+
+
 /****************** main ****************/
 int main (int argc, char *argv[])
 {
@@ -353,6 +398,7 @@ int main (int argc, char *argv[])
 	printf(">>> Frequency is %lf.\n", f);
 	note = get_note(f);
 	printf(">>> Note is \"%s\" (%p).\n", note, note);
+
 	if ((note == lastnote) || (duration == 0)) {
 	    printf("Same note as last time. duration = %d\n", duration);
 	    duration++;
@@ -375,6 +421,9 @@ int main (int argc, char *argv[])
     write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate);
 
     write_lilytail(lilyfile);
+
+    /* synthesize frequencies */
+    synthesize("synth.wav", freqs, numfreqs, (double)setsize / wavinfo.samplerate, wavinfo);
 
     /* free resources, close files */
     if ((status = sf_close(file)) != 0) {
