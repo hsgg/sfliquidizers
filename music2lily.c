@@ -11,11 +11,69 @@
 
 
 typedef struct {
-    double f;
     double min;
+    double freq;
     double max;
     char *note;
 } Freq2Note;
+
+
+
+char *get_note(double f)
+{
+    static char *note = NULL;
+    static Freq2Note fns[] = {
+	{ 288, 293, 296, "d'" },
+	{ 318, 325, 331, "e'" },
+	{ 365, 367, 369, "fis'" },
+	{ 384, 389, 395, "g'" },
+	{ 438, 440, 442, "a'" },
+	{ 480, 487, 491, "b'" },
+	{ 550, 555, 561, "cis''" },
+	{ 585, 587, 588, "d''" }
+    };
+    int i = sizeof(fns) / sizeof(Freq2Note);
+
+    while (i--) {
+	if ((fns[i].min <= f) && (fns[i].max >= f)) {
+	    note = fns[i].note;
+	    break;
+	}
+    }
+
+    /* If none is found, the last one will be used. */
+    return note;
+}
+
+
+char *get_duration(int duration)
+{
+    static char *dur = NULL;
+    static Freq2Note fns[] = {
+	{ 82, 92, 100, "2" },
+	{ 41, 46, 65, "4" },
+	{ 20, 23, 25, "8" },
+	{ 10, 11, 12, "16" },
+	{  5,  6,  6, "32" },
+	{  2,  3,  3, "64" }
+    };
+    int i = sizeof(fns) / sizeof(Freq2Note);
+
+    while (i--) {
+	printf("Checking %lf ... %lf.\n", fns[i].min, fns[i].max);
+	if ((fns[i].min <= (double)duration) && (fns[i].max >= (double)duration)) {
+	    dur = fns[i].note;
+	    break;
+	}
+    }
+
+    if (i == -1) {
+	printf("Duration %d not found!\n", duration);
+    }
+
+    /* If none is found, the last one will be used. */
+    return dur;
+}
 
 
 void write_lilyhead(FILE *lilyfile,
@@ -28,6 +86,16 @@ void write_lilyhead(FILE *lilyfile,
     fprintf(lilyfile, "}\n\n");
 
     fprintf(lilyfile, "\"music\" = {\n");
+}
+
+
+void print_note(FILE *lilyfile, char *note, int duration)
+{
+    char *dur = get_duration(duration);
+
+    printf(">>> Printing duration is %d (1/%s)\n", duration, dur);
+    printf("=============>>> Printing %s%s.\n", note, dur);
+    fprintf(lilyfile, "%s%s ", note, dur);
 }
 
 void write_lilytail(FILE *lilyfile)
@@ -207,31 +275,6 @@ double get_frequency(double *music, int setsize, double samplerate)
 }
 
 
-
-char *get_note(double f)
-{
-    static char *note = NULL;
-    static Freq2Note fns[] = {
-	{ 438, 440, 442, "a'64" },
-	{ 480, 487, 491, "b'" },
-	{ 550, 555, 561, "cis''" },
-	{ 585, 587, 588, "d''" }
-    };
-    int i = sizeof(fns) / sizeof(Freq2Note);
-
-    while (i--) {
-	if ((fns[i].min < f) && (fns[i].max > f)) {
-	    note = fns[i].note;
-	    break;
-	}
-    }
-
-    /* If none is found, the last one will be used. */
-    return note;
-}
-
-
-
 /****************** main ****************/
 int main (int argc, char *argv[])
 {
@@ -246,6 +289,8 @@ int main (int argc, char *argv[])
     double *freqs = NULL;
     double f;
     char *note = NULL;
+    char *lastnote = NULL;
+    int duration = 0;
     FILE *lilyfile = NULL;
 
 
@@ -302,21 +347,32 @@ int main (int argc, char *argv[])
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
-	/* save values */
-	write_to_file("data.dat", frames, music, 1.0 / wavinfo.samplerate);
-
-
 	f = get_frequency(music, frames, wavinfo.samplerate);
 	printf("i = %d (%lfsec), numfreqs = %d\n", i, i * (double)setsize / wavinfo.samplerate, numfreqs);
 	freqs[i++] = f;
-	printf("=================>>> Frequency is %lf.\n", f);
+	printf(">>> Frequency is %lf.\n", f);
 	note = get_note(f);
-	printf("=================>>> Note is %s.\n", note);
-	fprintf(lilyfile, "%s ", note);
+	printf(">>> Note is \"%s\" (%p).\n", note, note);
+	if ((note == lastnote) || (duration == 0)) {
+	    printf("Same note as last time. duration = %d\n", duration);
+	    duration++;
+	    lastnote = note;
+	} else {
+	    /* print last note */
+	    print_note(lilyfile, lastnote, duration);
+	    duration = 0;
+	    lastnote = note;
+	}
     }
 
-    write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate);
+    /* print last note */
+    if (lastnote != note) {
+	printf("Darn, I don't understand this algorithm!\n");
+	exit(6);
+    }
+    print_note(lilyfile, lastnote, duration);
 
+    write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate);
 
     write_lilytail(lilyfile);
 
