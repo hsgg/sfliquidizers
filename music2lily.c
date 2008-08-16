@@ -66,12 +66,16 @@ void fft(double *music, int setsize, complex *freq, int freqsize)
 
 double get_frequency(double *music, int setsize, double samplerate)
 {
-    int freqsize = 2000;
+    static int chunk = 0;
+    static char fname[1000];
+    int freqsize = 100;
     complex *freq = mymalloc(freqsize * sizeof(complex));
     double *afreq = mymalloc(freqsize * sizeof(double));
 
-    double avg, mass, stddev;
-    int i;
+    double avg, avg2, mass, stddev;
+    int i, j, k;
+
+    double result = 0.0;
 
     fft(music, setsize, freq, freqsize);
 
@@ -79,7 +83,8 @@ double get_frequency(double *music, int setsize, double samplerate)
     for (i = 0; i < freqsize; i++) {
 	afreq[i] = 1.0 / sqrt(setsize) * cabs(freq[i]);
     }
-    write_to_file("fft.dat", freqsize, afreq, samplerate / setsize);
+    snprintf(fname, 999, "fft%.2d.dat", chunk++);
+    write_to_file(fname, freqsize, afreq, samplerate / setsize);
 
 
     /* frequency of maximum, average */
@@ -113,26 +118,49 @@ double get_frequency(double *music, int setsize, double samplerate)
 	i++;
     }
 
-    /* first maximum */
+    /* first maximum above 2 * stddev */
     mass = 0.0;
     i = 0;
     while (i < freqsize) {
-	if (afreq[i] >= 2.0 * stddev) {
-	    printf("Next: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);
-	    if (afreq[i] > mass)
-		mass = afreq[i];
-	    else
-		break;
+	if (afreq[i] > mass)
+	    mass = afreq[i];
+	else if (mass > 2.0 * stddev) {
+	    i--;
+	    printf("First maximum above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);
+	    result = i * (double)samplerate / setsize;
+	    break;
 	}
 	i++;
     }
-    i--;
-    printf("First maximum: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);
+
+    /* average around first maximum */
+    j = i;
+    while (afreq[j] > 2.0 * stddev)
+	j--;
+    k = i;
+    while (afreq[k] > 2.0 * stddev)
+	k++;
+    avg = 0.0;
+    avg2 = 0.0;
+    mass = 0.0;
+    for (i = j + 1; i < k; i++) {
+	printf("Using in average: %lf (%lf)\n", i * samplerate / setsize, afreq[i]);
+	avg += afreq[i] * i;
+	avg2 += afreq[i] * i * i;
+	mass += afreq[i];
+    }
+    avg /= mass;
+    avg2 /= mass;
+    avg *= samplerate / setsize;
+    avg2 *= (samplerate / setsize) * (samplerate / setsize);
+    stddev = sqrt(avg2 - avg * avg);
+    printf("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
 
     free(freq);
     free(afreq);
 
-    return i * (double)samplerate / setsize;
+    //return result;
+    return avg;
 }
 
 
@@ -185,7 +213,7 @@ int main (int argc, char *argv[])
     }
 
     /* set sizes */
-    setsize = 0.05 * wavinfo.samplerate;
+    setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
     music = mymalloc(setsize * sizeof(double));
     numnotes = wavinfo.frames / setsize + 1;
     notes = mymalloc(numnotes * sizeof(double));
@@ -201,7 +229,7 @@ int main (int argc, char *argv[])
 
 
 	f = get_frequency(music, frames, wavinfo.samplerate);
-	printf("i = %d, numnotes = %d\n", i, numnotes);
+	printf("i = %d (%lfsec), numnotes = %d\n", i, i * (double)setsize / wavinfo.samplerate, numnotes);
 	notes[i++] = f;
 	printf("=================>>> Frequency is %lf.\n", f);
     }
