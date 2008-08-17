@@ -319,14 +319,19 @@ void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INF
 
 	phase = asin(2.0 * y2) - f * (-1);
 	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-	    printf("phase shift at %d: %lf", n - firstwriteout, phase);
-	if (abs((y2 - y1) / dt - 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase)) > 0.01) {
+	    DBG("phase shift at %d: %lf", n - firstwriteout, phase);
+
+	double yprime = (y2 - y1) / dt;
+	double synprime = 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
+	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
+	    DBG(", diff %lf", yprime - synprime);
+	if (abs(yprime - synprime) > 0.2 * f / dt) {
 	    if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-		printf(", need extra");
-	    phase -= M_PI;
+		DBG(", need extra");
+	    phase = M_PI - phase - f * 2 * (-1);
 	}
 	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-	    printf(", then %lf\n", phase);
+	    DBG(", then %lf\n", phase);
 
 	for (i = 0; i < setsize; i++)
 	    synth[i] = 0.5 * sin(f * i + phase);
