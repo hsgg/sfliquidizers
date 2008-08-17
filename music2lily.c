@@ -30,6 +30,7 @@ typedef struct tmp_fft {
 } tmp_fft;
 
 
+/********** lily *******/
 
 char *get_note(double f)
 {
@@ -137,15 +138,16 @@ void write_lilytail(FILE *lilyfile)
 }
 
 
+/********** file data *********/
 
-void write_to_file(char *filename, sf_count_t len, double *values, double xfactor)
+void write_to_file(char *filename, sf_count_t len, double *values, double xfactor, double xoffset)
 {
     INCDBG;
 
     sf_count_t i = 0;
     FILE *file = fopen(filename, "w");
 
-    DBG("Writing to file \"%s\"...\n", filename);
+    DBG("Writing to file \"%s\" with xfactor %lf and xoffset %lf...\n", filename, xfactor, xoffset);
 
     if (!file) {
 	printf("Could not open %s for writing.\n", filename);
@@ -153,7 +155,7 @@ void write_to_file(char *filename, sf_count_t len, double *values, double xfacto
     }
 
     for (i = 0; i < len; i++) {
-	fprintf(file, "%lf\t%lf\n", i * xfactor, values[i]);
+	fprintf(file, "%lf\t%lf\n", i * xfactor + xoffset, values[i]);
     }
 
     fclose(file);
@@ -211,7 +213,6 @@ double get_frequency(tmp_fft fft, double samplerate)
     double avg, avg2, mass, stddev;
     int i, j, k;
 
-/*    double result = 0.0;*/
 
     /* fft */
     DBG("Executing the plan...\n");
@@ -237,13 +238,6 @@ double get_frequency(tmp_fft fft, double samplerate)
     DBG("Average intensity: %lf\n", avg);
     DBG("Stddev: %lf\n", stddev);
 
-    /* above 2 * stddev */
-/*    i = 0;*/
-/*    while (i < freqsize) {*/
-/*        if (afreq[i] >= 2.0 * stddev)*/
-/*            DBG("Above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
-/*        i++;*/
-/*    }*/
 
     /* first maximum above 2 * stddev */
     mass = 0.0;
@@ -253,8 +247,6 @@ double get_frequency(tmp_fft fft, double samplerate)
 	    mass = afreq[i];
 	else if (mass > 2.0 * stddev) {
 	    i--;
-/*            DBG("First maximum above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
-/*            result = i * (double)samplerate / setsize;*/
 	    break;
 	}
 	i++;
@@ -285,38 +277,37 @@ double get_frequency(tmp_fft fft, double samplerate)
 
 
     DECDBG;
-    //return result;
     return avg;
 }
 
 
+/********* synth ***********/
 
-void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_INFO wavinfo)
+void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INFO wavinfo)
 {
     INCDBG;
-    SNDFILE *file = NULL;
+    SNDFILE *file = sf_open(filename, SFM_WRITE, &wavinfo);
     int i, n;
-    int setsize = xfactor * wavinfo.samplerate;
-    double *synth = NULL;
+    double *synth = mymalloc(setsize * sizeof(double));
     double k = 2.0 * M_PI / wavinfo.samplerate;
     double phase = 0.0;
-    double x1 = 0.0;
-    double x2 = 0.0;
+    double y1 = 0.0;
+    double y2 = 0.0;
     double dt = k / (2.0 * M_PI);
-    double t1 = -2.0 * dt;
-    double t2 = -1.0 * dt;
     double f = 0.0;
+
+    int const firstwriteout = 682;
+    int lo = 0;
+    int hi = 8;
+    double *lsyn = mymalloc((hi - lo) * setsize * sizeof(double));
 
     DBG("Synthesizing to file \"%s\"...\n", filename);
 
+    /* checks */
     if (wavinfo.channels != 1) {
 	printf("Error: Number of channels must be 1, currently.\n");
 	exit(7);
     }
-
-    /* alloc, open */
-    synth = mymalloc(setsize * sizeof(double));
-    file = sf_open(filename, SFM_WRITE, &wavinfo);
     if (!file) {
 	printf("Could not open file \"%s\".\n", filename);
 	exit(2);
@@ -325,17 +316,35 @@ void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_
     /* synthesize */
     for (n = 0; n < numfreqs; n++) {
 	f = k * freqs[n];
-	phase = asin(2.0 * x2) + f * t2;
-	if (abs((x2-x1)/dt - 0.5 * cos(f * (t2+t1)/2.0 + phase)) > 0.1) {
-	    phase = M_PI - phase;
-	}
 
-	for (i = 0; i < setsize; i++) {
+	phase = asin(2.0 * y2) - f * (-1);
+	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
+	    printf("phase shift at %d: %lf", n - firstwriteout, phase);
+	if (abs((y2 - y1) / dt - 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase)) > 0.01) {
+	    if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
+		printf(", need extra");
+	    phase -= M_PI;
+	}
+	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
+	    printf(", then %lf\n", phase);
+
+	for (i = 0; i < setsize; i++)
 	    synth[i] = 0.5 * sin(f * i + phase);
-	}
 
-	x1 = synth[i - 2];
-	x2 = synth[i - 1];
+	y1 = synth[setsize - 2];
+	y2 = synth[setsize - 1];
+
+	/* write section */
+	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi)) {
+	    int g = n - (firstwriteout + lo);
+	    synth[6] = 1.0;
+	    for (i = 0; i < setsize; i++)
+		lsyn[g * setsize + i] = synth[i];
+	}
+	if (n == firstwriteout + hi - 1) {
+	    write_to_file("sdata.dat", (hi - lo) * setsize, lsyn, 1.0 / wavinfo.samplerate,
+		    firstwriteout * (double)setsize / wavinfo.samplerate);
+	}
 
 	/* write to file */
 	if (sf_write_double(file, synth, setsize) != setsize) {
@@ -458,12 +467,12 @@ int main (int argc, char *argv[])
     print_note(lilyfile, lastnote, duration);
     DECDBG;
 
-    write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate);
+    write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate, 0.0);
 
     write_lilytail(lilyfile);
 
     /* synthesize frequencies */
-    synthesize("synth.wav", freqs, numfreqs, (double)setsize / wavinfo.samplerate, wavinfo);
+    synthesize("synth.wav", freqs, numfreqs, setsize, wavinfo);
 
     /* free resources, close files */
     if ((status = sf_close(file)) != 0) {
