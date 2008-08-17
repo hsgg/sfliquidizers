@@ -3,7 +3,8 @@ CFLAGS = -g -Wall
 LDFLAGS = -lsndfile -lfftw3 -lgsl
 
 
-HDR_C = libc.h
+HDR_C = libc.h \
+	fpDEBUG.h
 SRC_C = music2lily.c \
 	$(HDR_C:.h=.c)
 

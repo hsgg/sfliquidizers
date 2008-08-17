@@ -8,6 +8,7 @@
 #include <fftw3.h>
 
 #include "libc.h"
+#include "fpDEBUG.h"
 
 
 typedef struct {
@@ -59,6 +60,7 @@ char *get_note(double f)
 
 char *get_duration(int duration)
 {
+    INCDBG;
     static char *dur = NULL;
     static Freq2Note fns[] = {
 	{ 82, 92, 100, "2" },
@@ -71,7 +73,7 @@ char *get_duration(int duration)
     int i = sizeof(fns) / sizeof(Freq2Note);
 
     while (i--) {
-	printf("Checking %lf ... %lf.\n", fns[i].min, fns[i].max);
+	DBG("Checking %lf ... %lf.\n", fns[i].min, fns[i].max);
 	if ((fns[i].min <= (double)duration) && (fns[i].max >= (double)duration)) {
 	    dur = fns[i].note;
 	    break;
@@ -83,6 +85,7 @@ char *get_duration(int duration)
     }
 
     /* If none is found, the last one will be used. */
+    DECDBG;
     return dur;
 }
 
@@ -102,11 +105,14 @@ void write_lilyhead(FILE *lilyfile,
 
 void print_note(FILE *lilyfile, char *note, int duration)
 {
+    INCDBG;
     char *dur = get_duration(duration);
 
-    printf(">>> Printing duration is %d (1/%s)\n", duration, dur);
-    printf("=============>>> Printing %s%s.\n", note, dur);
+    DBG(">>> Printing duration is %d (1/%s)\n", duration, dur);
+    DBG("=============>>> Printing %s%s.\n", note, dur);
     fprintf(lilyfile, "%s%s ", note, dur);
+
+    DECDBG;
 }
 
 void write_lilytail(FILE *lilyfile)
@@ -134,10 +140,12 @@ void write_lilytail(FILE *lilyfile)
 
 void write_to_file(char *filename, sf_count_t len, double *values, double xfactor)
 {
+    INCDBG;
+
     sf_count_t i = 0;
     FILE *file = fopen(filename, "w");
 
-    printf("Writing to file \"%s\"...\n", filename);
+    DBG("Writing to file \"%s\"...\n", filename);
 
     if (!file) {
 	printf("Could not open %s for writing.\n", filename);
@@ -149,6 +157,8 @@ void write_to_file(char *filename, sf_count_t len, double *values, double xfacto
     }
 
     fclose(file);
+
+    DECDBG;
 }
 
 
@@ -156,6 +166,8 @@ void write_to_file(char *filename, sf_count_t len, double *values, double xfacto
 
 tmp_fft fft_init(int setsize, int freqsize)
 {
+    INCDBG;
+
     tmp_fft fft = {};
 
     fft.size = setsize;
@@ -165,7 +177,7 @@ tmp_fft fft_init(int setsize, int freqsize)
     fft.afreq = mymalloc(freqsize * sizeof(double));
 
     /* create data, 'couse that's what's a plan's all about */
-    printf("Creating a plan...\n");
+    DBG("Creating a plan...\n");
     fft.data = fftw_malloc((fft.size/2 + 1) * sizeof(fftw_complex));
     if (!fft.data) {
 	printf("Error: Could not allocate 'fft.data'.\n");
@@ -173,6 +185,7 @@ tmp_fft fft_init(int setsize, int freqsize)
     }
     fft.plan = fftw_plan_dft_r2c_1d(fft.size, fft.in, fft.data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
 
+    DECDBG;
     return fft;
 }
 
@@ -190,6 +203,7 @@ void fft_destroy(tmp_fft fft)
 
 double get_frequency(tmp_fft fft, double samplerate)
 {
+    INCDBG;
     int setsize = fft.size;
     int freqsize = fft.freqsize;
     double *afreq = fft.afreq;
@@ -200,7 +214,7 @@ double get_frequency(tmp_fft fft, double samplerate)
 /*    double result = 0.0;*/
 
     /* fft */
-    printf("Executing the plan...\n");
+    DBG("Executing the plan...\n");
     fftw_execute(fft.plan);
 
     /* convert to real freqs */
@@ -220,14 +234,14 @@ double get_frequency(tmp_fft fft, double samplerate)
     avg /= freqsize;
     avg2 /= freqsize;
     stddev = sqrt(avg2 - avg * avg);
-    printf("Average intensity: %lf\n", avg);
-    printf("Stddev: %lf\n", stddev);
+    DBG("Average intensity: %lf\n", avg);
+    DBG("Stddev: %lf\n", stddev);
 
     /* above 2 * stddev */
 /*    i = 0;*/
 /*    while (i < freqsize) {*/
 /*        if (afreq[i] >= 2.0 * stddev)*/
-/*            printf("Above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
+/*            DBG("Above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
 /*        i++;*/
 /*    }*/
 
@@ -239,7 +253,7 @@ double get_frequency(tmp_fft fft, double samplerate)
 	    mass = afreq[i];
 	else if (mass > 2.0 * stddev) {
 	    i--;
-/*            printf("First maximum above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
+/*            DBG("First maximum above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
 /*            result = i * (double)samplerate / setsize;*/
 	    break;
 	}
@@ -257,7 +271,7 @@ double get_frequency(tmp_fft fft, double samplerate)
     avg2 = 0.0;
     mass = 0.0;
     for (i = j + 1; i < k; i++) {
-	printf("Using in average: %lf (%lf)\n", i * samplerate / setsize, afreq[i]);
+	DBG("Using in average: %lf (%lf)\n", i * samplerate / setsize, afreq[i]);
 	avg += afreq[i] * i;
 	avg2 += afreq[i] * i * i;
 	mass += afreq[i];
@@ -267,9 +281,10 @@ double get_frequency(tmp_fft fft, double samplerate)
     avg *= samplerate / setsize;
     avg2 *= (samplerate / setsize) * (samplerate / setsize);
     stddev = sqrt(avg2 - avg * avg);
-    printf("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
+    DBG("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
 
 
+    DECDBG;
     //return result;
     return avg;
 }
@@ -278,6 +293,7 @@ double get_frequency(tmp_fft fft, double samplerate)
 
 void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_INFO wavinfo)
 {
+    INCDBG;
     SNDFILE *file = NULL;
     int i, n;
     int setsize = xfactor * wavinfo.samplerate;
@@ -291,7 +307,7 @@ void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_
     double t2 = -1.0 * dt;
     double f = 0.0;
 
-    printf("Synthesizing to file \"%s\"...\n", filename);
+    DBG("Synthesizing to file \"%s\"...\n", filename);
 
     if (wavinfo.channels != 1) {
 	printf("Error: Number of channels must be 1, currently.\n");
@@ -334,6 +350,8 @@ void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_
 	exit(9);
     }
     free(synth);
+
+    DECDBG;
 }
 
 
@@ -377,20 +395,20 @@ int main (int argc, char *argv[])
     }
 
     /* accounting data */
-    printf("filename: %s\n", argv[1]);
-    printf("title: %s\n", sf_get_string(file, SF_STR_TITLE));
-    printf("copyright: %s\n", sf_get_string(file, SF_STR_COPYRIGHT));
-    printf("software: %s\n", sf_get_string(file, SF_STR_SOFTWARE));
-    printf("artist: %s\n", sf_get_string(file, SF_STR_ARTIST));
-    printf("comment: %s\n", sf_get_string(file, SF_STR_COMMENT));
-    printf("date: %s\n", sf_get_string(file, SF_STR_DATE));
+    DBG("filename: %s\n", argv[1]);
+    DBG("title: %s\n", sf_get_string(file, SF_STR_TITLE));
+    DBG("copyright: %s\n", sf_get_string(file, SF_STR_COPYRIGHT));
+    DBG("software: %s\n", sf_get_string(file, SF_STR_SOFTWARE));
+    DBG("artist: %s\n", sf_get_string(file, SF_STR_ARTIST));
+    DBG("comment: %s\n", sf_get_string(file, SF_STR_COMMENT));
+    DBG("date: %s\n", sf_get_string(file, SF_STR_DATE));
 
-    printf("frames: %lld\n", wavinfo.frames);
-    printf("samplerate: %d\n", wavinfo.samplerate);
-    printf("channels: %d\n", wavinfo.channels);
-    printf("format: %d\n", wavinfo.format);
-    printf("sections: %d\n", wavinfo.sections);
-    printf("seekable: %d\n", wavinfo.seekable);
+    DBG("frames: %lld\n", wavinfo.frames);
+    DBG("samplerate: %d\n", wavinfo.samplerate);
+    DBG("channels: %d\n", wavinfo.channels);
+    DBG("format: %d\n", wavinfo.format);
+    DBG("sections: %d\n", wavinfo.sections);
+    DBG("seekable: %d\n", wavinfo.seekable);
 
     if (wavinfo.channels != 1) {
 	printf("Haven't thought about what to do with more than one channel!...\n");
@@ -408,20 +426,21 @@ int main (int argc, char *argv[])
     freqs = mymalloc(numfreqs * sizeof(double));
 
     /* read music */
+    INCDBG;
     i = 0;
     frames = setsize;
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
 	f = get_frequency(fft, wavinfo.samplerate);
-	printf("i = %d (%lfsec), numfreqs = %d\n", i, i * (double)setsize / wavinfo.samplerate, numfreqs);
+	DBG("i = %d (%lfsec), numfreqs = %d\n", i, i * (double)setsize / wavinfo.samplerate, numfreqs);
 	freqs[i++] = f;
-	printf(">>> Frequency is %lf.\n", f);
+	DBG(">>> Frequency is %lf.\n", f);
 	note = get_note(f);
-	printf(">>> Note is \"%s\" (%p).\n", note, note);
+	DBG(">>> Note is \"%s\" (%p).\n", note, note);
 
 	if ((note == lastnote) || (duration == 0)) {
-	    printf("Same note as last time. duration = %d\n", duration);
+	    DBG("Same note as last time. duration = %d\n", duration);
 	    duration++;
 	    lastnote = note;
 	} else {
@@ -431,13 +450,13 @@ int main (int argc, char *argv[])
 	    lastnote = note;
 	}
     }
-
     /* print last note */
     if (lastnote != note) {
 	printf("Darn, I don't understand this algorithm!\n");
 	exit(6);
     }
     print_note(lilyfile, lastnote, duration);
+    DECDBG;
 
     write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate);
 
