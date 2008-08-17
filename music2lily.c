@@ -17,6 +17,17 @@ typedef struct {
     char *note;
 } Freq2Note;
 
+typedef struct tmp_fft {
+    int size;
+    double *in;
+
+    fftw_complex *data;
+    fftw_plan plan;
+
+    int freqsize;
+    double *afreq;
+} tmp_fft;
+
 
 
 char *get_note(double f)
@@ -141,93 +152,84 @@ void write_to_file(char *filename, sf_count_t len, double *values, double xfacto
 }
 
 
-void fft(double *music, int setsize, complex *freq, int freqsize)
+/******** fft *********/
+
+tmp_fft fft_init(int setsize, int freqsize)
 {
-    fftw_complex *data = NULL;
-    fftw_plan plan;
-    int i = 0;
+    tmp_fft fft = {};
+
+    fft.size = setsize;
+    fft.freqsize = freqsize;
+
+    fft.in = mymalloc(setsize * sizeof(double));
+    fft.afreq = mymalloc(freqsize * sizeof(double));
 
     /* create data, 'couse that's what's a plan's all about */
     printf("Creating a plan...\n");
-    data = fftw_malloc((setsize/2 + 1) * sizeof(fftw_complex));
-    if (!data) {
-	printf("Error: Could not allocate 'data'.\n");
+    fft.data = fftw_malloc((fft.size/2 + 1) * sizeof(fftw_complex));
+    if (!fft.data) {
+	printf("Error: Could not allocate 'fft.data'.\n");
 	exit(-1);
     }
-    plan = fftw_plan_dft_r2c_1d(setsize, music, data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
+    fft.plan = fftw_plan_dft_r2c_1d(fft.size, fft.in, fft.data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
 
-    /* fft */
-    printf("Executing the plan...\n");
-    fftw_execute(plan);
+    return fft;
+}
 
-    /* convert fft */
-    printf("Copying result...\n");
-    for (i = 0; (i < freqsize) && (i < setsize/2 + 1); i++)
-	freq[i] = data[i];
-    while (i < freqsize) {
-	freq[i++] = 0.0;
-    }
-
+void fft_destroy(tmp_fft fft)
+{
     /* free */
-    fftw_destroy_plan(plan);
-    fftw_free(data);
+    free(fft.in);
+    free(fft.afreq);
+    fftw_destroy_plan(fft.plan);
+    fftw_free(fft.data);
     fftw_cleanup();
 }
 
 
-double get_frequency(double *music, int setsize, double samplerate)
+
+double get_frequency(tmp_fft fft, double samplerate)
 {
-/*    static int chunk = 0;*/
-/*    static char fname[1000];*/
-    int freqsize = 100;
-    complex *freq = mymalloc(freqsize * sizeof(complex));
-    double *afreq = mymalloc(freqsize * sizeof(double));
+    int setsize = fft.size;
+    int freqsize = fft.freqsize;
+    double *afreq = fft.afreq;
 
     double avg, avg2, mass, stddev;
     int i, j, k;
 
-    double result = 0.0;
+/*    double result = 0.0;*/
 
-    fft(music, setsize, freq, freqsize);
+    /* fft */
+    printf("Executing the plan...\n");
+    fftw_execute(fft.plan);
 
     /* convert to real freqs */
-    for (i = 0; i < freqsize; i++) {
-	afreq[i] = 1.0 / sqrt(setsize) * cabs(freq[i]);
-    }
-/*    snprintf(fname, 999, "fft%.2d.dat", chunk++);*/
-/*    write_to_file(fname, freqsize, afreq, samplerate / setsize);*/
+    for (i = 0; (i < freqsize) && (i < fft.size/2 + 1); i++)
+	afreq[i] = cabs(fft.data[i]) / sqrt(fft.size);
+    while (i < freqsize)
+	afreq[i++] = 0.0;
 
-
-    /* frequency of maximum, average */
-    avg = 0.0;
-    mass = 0.0;
-    for (i = 0; i < freqsize; i++) {
-	avg += afreq[i] * i * (double)samplerate / setsize;
-	mass += afreq[i];
-    }
-    avg /= mass;
-    printf("Average frequency: %lf\n", avg);
 
     /* average intensity, stddev */
     avg = 0.0;
-    mass = 0.0; // avg^2, really
+    avg2 = 0.0;
     for (i = 0; i < freqsize; i++) {
 	avg += afreq[i];
-	mass += afreq[i] * afreq[i];
+	avg2 += afreq[i] * afreq[i];
     }
     avg /= freqsize;
-    mass /= freqsize;
-    stddev = sqrt(mass - avg * avg);
+    avg2 /= freqsize;
+    stddev = sqrt(avg2 - avg * avg);
     printf("Average intensity: %lf\n", avg);
     printf("Stddev: %lf\n", stddev);
 
     /* above 2 * stddev */
-    i = 0;
-    while (i < freqsize) {
-	if (afreq[i] >= 2.0 * stddev)
-	    printf("Above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);
-	i++;
-    }
+/*    i = 0;*/
+/*    while (i < freqsize) {*/
+/*        if (afreq[i] >= 2.0 * stddev)*/
+/*            printf("Above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
+/*        i++;*/
+/*    }*/
 
     /* first maximum above 2 * stddev */
     mass = 0.0;
@@ -237,8 +239,8 @@ double get_frequency(double *music, int setsize, double samplerate)
 	    mass = afreq[i];
 	else if (mass > 2.0 * stddev) {
 	    i--;
-	    printf("First maximum above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);
-	    result = i * (double)samplerate / setsize;
+/*            printf("First maximum above 2 * stddev: %lf (%lf)\n", i * (double)samplerate / setsize, afreq[i]);*/
+/*            result = i * (double)samplerate / setsize;*/
 	    break;
 	}
 	i++;
@@ -267,8 +269,6 @@ double get_frequency(double *music, int setsize, double samplerate)
     stddev = sqrt(avg2 - avg * avg);
     printf("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
 
-    free(freq);
-    free(afreq);
 
     //return result;
     return avg;
@@ -344,7 +344,8 @@ int main (int argc, char *argv[])
     int i;
     SNDFILE *file = NULL;
     SF_INFO wavinfo = {};
-    long long int setsize = 0;
+    int setsize = 0;
+    int freqsize = 0;
     long long int frames = 0;
     double *music = NULL;
     int numfreqs = 0;
@@ -354,6 +355,7 @@ int main (int argc, char *argv[])
     char *lastnote = NULL;
     int duration = 0;
     FILE *lilyfile = NULL;
+    tmp_fft fft = {};
 
 
     if (argc != 3) {
@@ -399,7 +401,9 @@ int main (int argc, char *argv[])
 
     /* set sizes */
     setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
-    music = mymalloc(setsize * sizeof(double));
+    freqsize = 100;
+    fft = fft_init(setsize, freqsize);
+    music = fft.in;
     numfreqs = wavinfo.frames / setsize + 1;
     freqs = mymalloc(numfreqs * sizeof(double));
 
@@ -409,7 +413,7 @@ int main (int argc, char *argv[])
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
-	f = get_frequency(music, frames, wavinfo.samplerate);
+	f = get_frequency(fft, wavinfo.samplerate);
 	printf("i = %d (%lfsec), numfreqs = %d\n", i, i * (double)setsize / wavinfo.samplerate, numfreqs);
 	freqs[i++] = f;
 	printf(">>> Frequency is %lf.\n", f);
@@ -447,7 +451,7 @@ int main (int argc, char *argv[])
 	printf("Error closing file.\n");
 	exit(status);
     }
-    free(music);
+    fft_destroy(fft);
     free(freqs);
     fclose(lilyfile);
 
