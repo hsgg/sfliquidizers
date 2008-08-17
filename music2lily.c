@@ -296,11 +296,6 @@ void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INF
     double dt = k / (2.0 * M_PI);
     double f = 0.0;
 
-    int const firstwriteout = 682;
-    int lo = 0;
-    int hi = 8;
-    double *lsyn = mymalloc((hi - lo) * setsize * sizeof(double));
-
     DBG("Synthesizing to file \"%s\"...\n", filename);
 
     /* checks */
@@ -318,37 +313,19 @@ void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INF
 	f = k * freqs[n];
 
 	phase = asin(2.0 * y2) - f * (-1);
-	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-	    DBG("phase shift at %d: %lf", n - firstwriteout, phase);
 
 	double yprime = (y2 - y1) / dt;
 	double synprime = 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
-	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-	    DBG(", diff %lf", yprime - synprime);
 	if (abs(yprime - synprime) > 0.2 * f / dt) {
-	    if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-		DBG(", need extra");
 	    phase = M_PI - phase - f * 2 * (-1);
 	}
-	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi))
-	    DBG(", then %lf\n", phase);
 
 	for (i = 0; i < setsize; i++)
 	    synth[i] = 0.5 * sin(f * i + phase);
 
-	y1 = synth[setsize - 2];
-	y2 = synth[setsize - 1];
-
-	/* write section */
-	if ((n >= firstwriteout + lo) && (n < firstwriteout + hi)) {
-	    int g = n - (firstwriteout + lo);
-	    synth[6] = 1.0;
-	    for (i = 0; i < setsize; i++)
-		lsyn[g * setsize + i] = synth[i];
-	}
-	if (n == firstwriteout + hi - 1) {
-	    write_to_file("sdata.dat", (hi - lo) * setsize, lsyn, 1.0 / wavinfo.samplerate,
-		    firstwriteout * (double)setsize / wavinfo.samplerate);
+	if (setsize >= 2) {
+	    y1 = synth[setsize - 2];
+	    y2 = synth[setsize - 1];
 	}
 
 	/* write to file */
