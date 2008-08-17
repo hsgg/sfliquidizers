@@ -177,8 +177,8 @@ void fft(double *music, int setsize, complex *freq, int freqsize)
 
 double get_frequency(double *music, int setsize, double samplerate)
 {
-    static int chunk = 0;
-    static char fname[1000];
+/*    static int chunk = 0;*/
+/*    static char fname[1000];*/
     int freqsize = 100;
     complex *freq = mymalloc(freqsize * sizeof(complex));
     double *afreq = mymalloc(freqsize * sizeof(double));
@@ -194,8 +194,8 @@ double get_frequency(double *music, int setsize, double samplerate)
     for (i = 0; i < freqsize; i++) {
 	afreq[i] = 1.0 / sqrt(setsize) * cabs(freq[i]);
     }
-    snprintf(fname, 999, "fft%.2d.dat", chunk++);
-    write_to_file(fname, freqsize, afreq, samplerate / setsize);
+/*    snprintf(fname, 999, "fft%.2d.dat", chunk++);*/
+/*    write_to_file(fname, freqsize, afreq, samplerate / setsize);*/
 
 
     /* frequency of maximum, average */
@@ -282,7 +282,14 @@ void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_
     int i, n;
     int setsize = xfactor * wavinfo.samplerate;
     double *synth = NULL;
-    double k = 2 * M_PI / wavinfo.samplerate;
+    double k = 2.0 * M_PI / wavinfo.samplerate;
+    double phase = 0.0;
+    double x1 = 0.0;
+    double x2 = 0.0;
+    double dt = k / (2.0 * M_PI);
+    double t1 = -2.0 * dt;
+    double t2 = -1.0 * dt;
+    double f = 0.0;
 
     printf("Synthesizing to file \"%s\"...\n", filename);
 
@@ -301,9 +308,19 @@ void synthesize(char *filename, double *freqs, int numfreqs, double xfactor, SF_
 
     /* synthesize */
     for (n = 0; n < numfreqs; n++) {
-	for (i = 0; i < setsize; i++) {
-	    synth[i] = 0.5 * sin(k * freqs[n] * i);
+	f = k * freqs[n];
+	phase = asin(2.0 * x2) + f * t2;
+	if (abs((x2-x1)/dt - 0.5 * cos(f * (t2+t1)/2.0 + phase)) > 0.1) {
+	    phase = M_PI - phase;
 	}
+
+	for (i = 0; i < setsize; i++) {
+	    synth[i] = 0.5 * sin(f * i + phase);
+	}
+
+	x1 = synth[i - 2];
+	x2 = synth[i - 1];
+
 	/* write to file */
 	if (sf_write_double(file, synth, setsize) != setsize) {
 	    printf("Couldn't write all frames! Don't know why.\n");
