@@ -11,13 +11,6 @@
 #include "fpDEBUG.h"
 
 
-typedef struct {
-    double min;
-    double freq;
-    double max;
-    char *note;
-} Freq2Note;
-
 typedef struct tmp_fft {
     int size;
     double *in;
@@ -30,53 +23,48 @@ typedef struct tmp_fft {
 } tmp_fft;
 
 
+typedef struct {
+    double min;
+    double freq;
+    double max;
+    char *note;
+} Freq2Note;
+
+typedef struct {
+    int size;
+    Freq2Note *fns;
+} Freq2NoteArray;
+
+
+
 /********** lily *******/
 
-char *get_note(double f)
+char *get_note(Freq2NoteArray *fns, double f)
 {
-    static char *note = NULL;
-    static Freq2Note fns[] = {
-	{ 288, 293, 296, "d'" },
-	{ 318, 325, 331, "e'" },
-	{ 365, 367, 369, "fis'" },
-	{ 384, 389, 395, "g'" },
-	{ 438, 440, 442, "a'" },
-	{ 480, 487, 491, "b'" },
-	{ 550, 555, 561, "cis''" },
-	{ 585, 587, 588, "d''" }
-    };
-    int i = sizeof(fns) / sizeof(Freq2Note);
+    char *note = NULL;
+    int i = fns->size;
 
     while (i--) {
-	if ((fns[i].min <= f) && (fns[i].max >= f)) {
-	    note = fns[i].note;
+	if ((fns->fns[i].min <= f) && (fns->fns[i].max >= f)) {
+	    note = fns->fns[i].note;
 	    break;
 	}
     }
 
-    /* If none is found, the last one will be used. */
     return note;
 }
 
 
-char *get_duration(int duration)
+char *get_duration(Freq2NoteArray *durs, int duration)
 {
     INCDBG;
-    char *dur;
-    static Freq2Note fns[] = {
-	{ 82, 92, 100, "2" },
-	{ 36, 46, 65, "4" },
-	{ 20, 23, 25, "8" },
-	{ 10, 11, 12, "16" }
-    };
-    int i = sizeof(fns) / sizeof(Freq2Note);
-
-    dur = NULL;
+    char *dur = NULL;
+    int i = durs->size;
 
     while (i--) {
-	DBG("Checking %lf ... %lf.\n", fns[i].min, fns[i].max);
-	if ((fns[i].min <= (double)duration) && (fns[i].max >= (double)duration)) {
-	    dur = fns[i].note;
+	DBG("Checking %lf ... %lf.\n", durs->fns[i].min, durs->fns[i].max);
+	if ((durs->fns[i].min <= (double)duration) && (durs->fns[i].max >= (double)duration)) {
+	    dur = durs->fns[i].note;
 	    break;
 	}
     }
@@ -88,7 +76,6 @@ char *get_duration(int duration)
 	DBG("Searching for duration %d...->%s\n", duration, dur);
     }
 
-    /* If none is found, the last one will be used. */
     DECDBG;
     return dur;
 }
@@ -107,10 +94,10 @@ void write_lilyhead(FILE *lilyfile,
 }
 
 
-void print_note(FILE *lilyfile, char *note, int duration)
+void print_note(Freq2NoteArray *durs, FILE *lilyfile, char *note, int duration)
 {
     INCDBG;
-    char *dur = get_duration(duration);
+    char *dur = get_duration(durs, duration);
 
     if (dur) {
 	DBG(">>> dur = %d >>> Printing %s%s.\n", duration, note, dur);
@@ -372,6 +359,34 @@ int main (int argc, char *argv[])
     FILE *lilyfile = NULL;
     tmp_fft fft = {};
 
+    /* frequencies */
+    Freq2Note freqsandnotes[] = {
+	{ 288, 293, 296, "d'" },
+	{ 318, 325, 331, "e'" },
+	{ 365, 367, 369, "fis'" },
+	{ 384, 389, 395, "g'" },
+	{ 438, 440, 442, "a'" },
+	{ 480, 487, 491, "b'" },
+	{ 550, 555, 561, "cis''" },
+	{ 585, 587, 588, "d''" }
+    };
+    Freq2NoteArray fns = {
+	sizeof(freqsandnotes) / sizeof(Freq2Note),
+	freqsandnotes
+    };
+
+    /* durations */
+    Freq2Note dursanddurs[] = {
+	{ 82, 92, 100, "2" },
+	{ 36, 46, 65, "4" },
+	{ 20, 23, 25, "8" },
+	{ 10, 11, 12, "16" }
+    };
+    Freq2NoteArray durs = {
+	sizeof(dursanddurs) / sizeof(Freq2Note),
+	dursanddurs
+    };
+
 
     if (argc != 3) {
 	printf("Usage: %s <sndfile> <lilyfile>\n", argv[0]);
@@ -430,7 +445,9 @@ int main (int argc, char *argv[])
 
 	f = get_frequency(fft, wavinfo.samplerate);
 	freqs[i++] = f;
-	note = get_note(f);
+	note = get_note(&fns, f);
+	if (!note)
+	    note = lastnote;
 
 	if ((note == lastnote) || (duration == 0)) {
 	    duration++;
@@ -438,7 +455,7 @@ int main (int argc, char *argv[])
 	} else {
 	    DECDBG;
 	    /* print last note */
-	    print_note(lilyfile, lastnote, duration);
+	    print_note(&durs, lilyfile, lastnote, duration);
 	    duration = 0;
 	    lastnote = note;
 	    INCDBG;
@@ -449,7 +466,7 @@ int main (int argc, char *argv[])
 	printf("Darn, I don't understand this algorithm!\n");
 	exit(6);
     }
-    print_note(lilyfile, lastnote, duration);
+    print_note(&durs, lilyfile, lastnote, duration);
 
     write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate, 0.0);
 
