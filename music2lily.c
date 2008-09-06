@@ -62,16 +62,16 @@ char *get_note(double f)
 char *get_duration(int duration)
 {
     INCDBG;
-    static char *dur = NULL;
+    char *dur;
     static Freq2Note fns[] = {
 	{ 82, 92, 100, "2" },
-	{ 40, 46, 65, "4" },
+	{ 36, 46, 65, "4" },
 	{ 20, 23, 25, "8" },
-	{ 10, 11, 12, "16" },
-	{  5,  6,  6, "32" },
-	{  2,  3,  3, "64" }
+	{ 10, 11, 12, "16" }
     };
     int i = sizeof(fns) / sizeof(Freq2Note);
+
+    dur = NULL;
 
     while (i--) {
 	DBG("Checking %lf ... %lf.\n", fns[i].min, fns[i].max);
@@ -83,6 +83,9 @@ char *get_duration(int duration)
 
     if (i == -1) {
 	printf("Duration %d not found!\n", duration);
+    }
+    else {
+	DBG("Searching for duration %d...->%s\n", duration, dur);
     }
 
     /* If none is found, the last one will be used. */
@@ -109,9 +112,12 @@ void print_note(FILE *lilyfile, char *note, int duration)
     INCDBG;
     char *dur = get_duration(duration);
 
-    DBG(">>> Printing duration is %d (1/%s)\n", duration, dur);
-    DBG("=============>>> Printing %s%s.\n", note, dur);
-    fprintf(lilyfile, "%s%s ", note, dur);
+    if (dur) {
+	DBG(">>> dur = %d >>> Printing %s%s.\n", duration, note, dur);
+	fprintf(lilyfile, "%s%s ", note, dur);
+    } else {
+	DBG("<<< dur = %d <<< NOT printing %s%s.\n", duration, note, dur);
+    }
 
     DECDBG;
 }
@@ -316,7 +322,7 @@ void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INF
 
 	double yprime = (y2 - y1) / dt;
 	double synprime = 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
-	if (abs(yprime - synprime) > 0.2 * f / dt) {
+	if (abs(yprime - synprime) > 0.01 * f / dt) {
 	    phase = M_PI - phase - f * 2 * (-1);
 	}
 
@@ -417,28 +423,25 @@ int main (int argc, char *argv[])
     freqs = mymalloc(numfreqs * sizeof(double));
 
     /* read music */
-    INCDBG;
     i = 0;
     frames = setsize;
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
 	f = get_frequency(fft, wavinfo.samplerate);
-	DBG("i = %d (%lfsec), numfreqs = %d\n", i, i * (double)setsize / wavinfo.samplerate, numfreqs);
 	freqs[i++] = f;
-	DBG(">>> Frequency is %lf.\n", f);
 	note = get_note(f);
-	DBG(">>> Note is \"%s\" (%p).\n", note, note);
 
 	if ((note == lastnote) || (duration == 0)) {
-	    DBG("Same note as last time. duration = %d\n", duration);
 	    duration++;
 	    lastnote = note;
 	} else {
+	    DECDBG;
 	    /* print last note */
 	    print_note(lilyfile, lastnote, duration);
 	    duration = 0;
 	    lastnote = note;
+	    INCDBG;
 	}
     }
     /* print last note */
@@ -447,7 +450,6 @@ int main (int argc, char *argv[])
 	exit(6);
     }
     print_note(lilyfile, lastnote, duration);
-    DECDBG;
 
     write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate, 0.0);
 
