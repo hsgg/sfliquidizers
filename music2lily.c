@@ -9,6 +9,7 @@
 
 #include "libc.h"
 #include "fpDEBUG.h"
+#include "tune.h"
 
 
 typedef struct tmp_fft {
@@ -23,30 +24,17 @@ typedef struct tmp_fft {
 } tmp_fft;
 
 
-typedef struct {
-    double min;
-    double freq;
-    double max;
-    char *note;
-} Freq2Note;
-
-typedef struct {
-    int size;
-    Freq2Note *fns;
-} Freq2NoteArray;
-
-
 
 /********** lily *******/
 
-char *get_note(Freq2NoteArray *fns, double f)
+char *get_note(MappingArray *fns, double f)
 {
     char *note = NULL;
     int i = fns->size;
 
     while (i--) {
-	if ((fns->fns[i].min <= f) && (fns->fns[i].max >= f)) {
-	    note = fns->fns[i].note;
+	if ((fns->m[i].min <= f) && (fns->m[i].max >= f)) {
+	    note = fns->m[i].note;
 	    break;
 	}
     }
@@ -55,16 +43,16 @@ char *get_note(Freq2NoteArray *fns, double f)
 }
 
 
-char *get_duration(Freq2NoteArray *durs, int duration)
+char *get_duration(MappingArray *durs, int duration)
 {
     INCDBG;
     char *dur = NULL;
     int i = durs->size;
 
     while (i--) {
-	DBG("Checking %lf ... %lf.\n", durs->fns[i].min, durs->fns[i].max);
-	if ((durs->fns[i].min <= (double)duration) && (durs->fns[i].max >= (double)duration)) {
-	    dur = durs->fns[i].note;
+	DBG("Checking %lf ... %lf.\n", durs->m[i].min, durs->m[i].max);
+	if ((durs->m[i].min <= (double)duration) && (durs->m[i].max >= (double)duration)) {
+	    dur = durs->m[i].note;
 	    break;
 	}
     }
@@ -94,7 +82,7 @@ void write_lilyhead(FILE *lilyfile,
 }
 
 
-void print_note(Freq2NoteArray *durs, FILE *lilyfile, char *note, int duration)
+void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
 {
     INCDBG;
     char *dur = get_duration(durs, duration);
@@ -360,32 +348,10 @@ int main (int argc, char *argv[])
     tmp_fft fft = {};
 
     /* frequencies */
-    Freq2Note freqsandnotes[] = {
-	{ 288, 293, 296, "d'" },
-	{ 318, 325, 331, "e'" },
-	{ 365, 367, 369, "fis'" },
-	{ 384, 389, 395, "g'" },
-	{ 438, 440, 442, "a'" },
-	{ 480, 487, 491, "b'" },
-	{ 550, 555, 561, "cis''" },
-	{ 585, 587, 588, "d''" }
-    };
-    Freq2NoteArray fns = {
-	sizeof(freqsandnotes) / sizeof(Freq2Note),
-	freqsandnotes
-    };
+    MappingArray fns = fns_tune();
 
     /* durations */
-    Freq2Note dursanddurs[] = {
-	{ 82, 92, 100, "2" },
-	{ 36, 46, 65, "4" },
-	{ 20, 23, 25, "8" },
-	{ 10, 11, 12, "16" }
-    };
-    Freq2NoteArray durs = {
-	sizeof(dursanddurs) / sizeof(Freq2Note),
-	dursanddurs
-    };
+    MappingArray durs = dur_tune();
 
 
     if (argc != 3) {
@@ -445,8 +411,7 @@ int main (int argc, char *argv[])
 
 	f = get_frequency(fft, wavinfo.samplerate);
 	freqs[i++] = f;
-	note = get_note(&fns, f);
-	if (!note)
+	if (!(note = get_note(&fns, f)))
 	    note = lastnote;
 
 	if ((note == lastnote) || (duration == 0)) {
