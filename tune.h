@@ -18,5 +18,7 @@ typedef struct {
 MappingArray fns_tune();
 MappingArray dur_tune();
 
+char *get_str(MappingArray *map, double value);
+
 
 #endif

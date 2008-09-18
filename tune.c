@@ -1,5 +1,6 @@
 #include "libc.h"
 #include "tune.h"
+#include "fpDEBUG.h"
 
 
 MappingArray fns_tune()
@@ -22,6 +23,7 @@ MappingArray fns_tune()
     int i = fns.size;
     while (i--) {
 	fns.m[i] = freqsandnotes[i];
+	DBG("note[%d] = %s\n", i, freqsandnotes[i].note);
 	/* The string needs to be copied explicitly: */
 	fns.m[i].note = realloc_strcpy(NULL, freqsandnotes[i].note);
     }
@@ -52,3 +54,22 @@ MappingArray dur_tune()
 
     return durs;
 }
+
+
+
+char *get_str(MappingArray *map, double value)
+{
+    char *str = NULL;
+    int i = map->size;
+
+    while (i--) {
+	if ((map->m[i].min <= value) && (map->m[i].max >= value)) {
+	    str = map->m[i].note;
+	    break;
+	}
+    }
+
+    return str;
+}
+
+

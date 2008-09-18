@@ -27,52 +27,10 @@ typedef struct tmp_fft {
 
 /********** lily *******/
 
-char *get_note(MappingArray *fns, double f)
-{
-    char *note = NULL;
-    int i = fns->size;
-
-    while (i--) {
-	if ((fns->m[i].min <= f) && (fns->m[i].max >= f)) {
-	    note = fns->m[i].note;
-	    break;
-	}
-    }
-
-    return note;
-}
-
-
-char *get_duration(MappingArray *durs, int duration)
-{
-    INCDBG;
-    char *dur = NULL;
-    int i = durs->size;
-
-    while (i--) {
-	DBG("Checking %lf ... %lf.\n", durs->m[i].min, durs->m[i].max);
-	if ((durs->m[i].min <= (double)duration) && (durs->m[i].max >= (double)duration)) {
-	    dur = durs->m[i].note;
-	    break;
-	}
-    }
-
-    if (i == -1) {
-	printf("Duration %d not found!\n", duration);
-    }
-    else {
-	DBG("Searching for duration %d...->%s\n", duration, dur);
-    }
-
-    DECDBG;
-    return dur;
-}
-
-
 void write_lilyhead(FILE *lilyfile,
 	char *name)
 {
-    fprintf(lilyfile, "\\version \"2.11.52\"\n");
+    fprintf(lilyfile, "\\version \"2.11.55\"\n");
 
     fprintf(lilyfile, "\\header {\n");
     fprintf(lilyfile, "  title = \"%s\"\n", name);
@@ -84,8 +42,7 @@ void write_lilyhead(FILE *lilyfile,
 
 void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
 {
-    INCDBG;
-    char *dur = get_duration(durs, duration);
+    char *dur = get_str(durs, duration);
 
     if (dur) {
 	DBG(">>> dur = %d >>> Printing %s%s.\n", duration, note, dur);
@@ -93,8 +50,6 @@ void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
     } else {
 	DBG("<<< dur = %d <<< NOT printing %s%s.\n", duration, note, dur);
     }
-
-    DECDBG;
 }
 
 void write_lilytail(FILE *lilyfile)
@@ -411,19 +366,17 @@ int main (int argc, char *argv[])
 
 	f = get_frequency(fft, wavinfo.samplerate);
 	freqs[i++] = f;
-	if (!(note = get_note(&fns, f)))
+	if (!(note = get_str(&fns, f)))
 	    note = lastnote;
 
 	if ((note == lastnote) || (duration == 0)) {
 	    duration++;
 	    lastnote = note;
 	} else {
-	    DECDBG;
 	    /* print last note */
 	    print_note(&durs, lilyfile, lastnote, duration);
 	    duration = 0;
 	    lastnote = note;
-	    INCDBG;
 	}
     }
     /* print last note */
