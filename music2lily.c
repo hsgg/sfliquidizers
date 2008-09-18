@@ -221,7 +221,6 @@ double get_frequency(tmp_fft fft, double samplerate)
 
 void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INFO wavinfo)
 {
-    INCDBG;
     SNDFILE *file = sf_open(filename, SFM_WRITE, &wavinfo);
     int i, n;
     double *synth = mymalloc(setsize * sizeof(double));
@@ -277,8 +276,6 @@ void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INF
 	exit(9);
     }
     free(synth);
-
-    DECDBG;
 }
 
 

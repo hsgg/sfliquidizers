@@ -35,10 +35,10 @@ MappingArray fns_tune()
 MappingArray dur_tune()
 {
     Mapping dursanddurs[] = {
-	{ 82, 92, 100, "2" },
+	{ 82, 92, 120, "2" },
 	{ 36, 46, 65, "4" },
-	{ 20, 23, 25, "8" },
-	{ 10, 11, 12, "16" }
+	{ 18, 23, 35, "8" },
+	{ 10, 11, 16, "16" }
     };
 
     MappingArray durs = {};
