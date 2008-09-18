@@ -3,14 +3,8 @@ CFLAGS = -g -Wall
 LDFLAGS = -lsndfile -lfftw3 -lgsl
 
 
-HDR_C = libc.h \
-	fpDEBUG.h
-SRC_C = music2lily.c \
-	$(HDR_C:.h=.c)
-
-SRC = $(SRC_C)
-OBJ = $(SRC_C:.c=.o)
 PROG = music2lily
+SRC = $(PROG).c
 
 DEPFILE = .depend
 PROGDEPFILE = .progdepend
@@ -22,7 +16,7 @@ all: $(PROGDEPFILE) $(PROG)
 
 
 # dependecies
-$(DEPFILE): $(SRC)
+$(DEPFILE): *.c *.h
 	$(CC) -MM $(SRC) > $(DEPFILE)
 
 $(PROGDEPFILE): $(DEPFILE)
@@ -37,7 +31,7 @@ $(PROGDEPFILE): $(DEPFILE)
 # cleaners
 .PHONY: clean
 clean:
-	rm -f $(OBJ)
+	rm -f *.o
 	rm -f $(PROG)
 	rm -f $(DEPFILE) $(PROGDEPFILE)
 
