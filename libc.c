@@ -37,14 +37,17 @@ void *myrealloc(void *ptr, size_t size)
 /* realloc_strcpy() convenience function */
 char *realloc_strcpy(char **dest, char *src)
 {
-    *dest = myrealloc(*dest, (strlen(src) + 1) * sizeof(char));
-    return strcpy(*dest, src);
+    char *new = (dest ? *dest : NULL);
+    new = myrealloc(new, (strlen(src) + 1) * sizeof(char));
+    if (dest)
+        *dest = new;
+    return strcpy(new, src);
 }
 
 /* realloc_strcat() convenience function */
 char *realloc_strcat(char **dest, char *src)
 {
-    if (*dest == NULL)
+    if (dest == NULL || *dest == NULL)
         return realloc_strcpy(dest, src);
     else {
         *dest = myrealloc(*dest, (strlen(*dest) + strlen(src) + 1) * sizeof(char));
