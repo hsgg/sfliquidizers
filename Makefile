@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall
-LDFLAGS = -lsndfile -lfftw3 -lgsl
+LDFLAGS = -lsndfile -lfftw3
 
 
 PROG = music2lily
