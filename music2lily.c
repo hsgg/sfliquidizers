@@ -122,7 +122,7 @@ int main (int argc, char *argv[])
     char *lastnote = NULL;
     int duration = 0;
     FILE *lilyfile = NULL;
-    tmp_fft fft = {};
+    tmp_fft *fft;
 
 
     if (argc != 3) {
@@ -170,7 +170,7 @@ int main (int argc, char *argv[])
     setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
     freqsize = 100;
     fft = fft_init(setsize, freqsize);
-    music = fft.in;
+    music = fft_inptr(fft);
     numfreqs = wavinfo.frames / setsize + 1;
     freqs = mymalloc(numfreqs * sizeof(double));
 
