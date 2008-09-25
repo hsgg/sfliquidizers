@@ -55,6 +55,49 @@ MappingArray dur_tune()
     return durs;
 }
 
+void print_mapping(Mapping *m)
+{
+    DBG("%p->min = %d\n", m, m->min);
+    DBG("%p->avg = %f\n", m, m->avg);
+    DBG("%p->max = %d\n", m, m->max);
+    DBG("%p->note = \"%s\"\n", m, m->note);
+    DBG("\n");
+}
+
+/* dur_tune_metronome():
+ * 	- unit: The length of an elementary unit.
+ * 	- quarter: The number of quarter notes per minute (like on a metonome). */
+MappingArray dur_tune_metronome(double const unit, double quarter)
+{
+    MappingArray durs = {};
+    int length = 16;
+    int lowermax = 4.0 / length * quarter / unit * 0.75;
+
+    /* Length of a quarter note in seconds */
+    quarter = 60.0 / quarter;
+
+    do {
+	int i = durs.size;
+	durs.size += 2;
+	durs.m = myrealloc(durs.m, durs.size * sizeof(Mapping));
+
+	durs.m[i].avg = 4.0 / length * quarter / unit;
+	durs.m[i].min = lowermax;
+	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
+	durs.m[i].note = print2string(NULL, "%d", length);
+	print_mapping(&durs.m[i]);
+
+	i++;
+	durs.m[i].avg = 1.5 * 4.0 / length * quarter / unit;
+	durs.m[i].min = lowermax;
+	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
+	durs.m[i].note = print2string(NULL, "%d.", length);
+	print_mapping(&durs.m[i]);
+    } while ((length /= 2) >= 1);
+
+    return durs;
+}
+
 
 
 char *get_str(MappingArray *map, double value)

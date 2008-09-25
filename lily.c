@@ -22,7 +22,7 @@ void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
 {
     char *dur = get_str(durs, duration);
 
-    if (dur) {
+    if (dur && note) {
 	DBG(">>> dur = %d >>> Printing %s%s.\n", duration, note, dur);
 	fprintf(lilyfile, "%s%s ", note, dur);
     } else {

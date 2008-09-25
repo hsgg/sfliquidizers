@@ -124,12 +124,6 @@ int main (int argc, char *argv[])
     FILE *lilyfile = NULL;
     tmp_fft fft = {};
 
-    /* frequencies */
-    MappingArray fns = fns_tune();
-
-    /* durations */
-    MappingArray durs = dur_tune();
-
 
     if (argc != 3) {
 	printf("Usage: %s <sndfile> <lilyfile>\n", argv[0]);
@@ -179,6 +173,13 @@ int main (int argc, char *argv[])
     music = fft.in;
     numfreqs = wavinfo.frames / setsize + 1;
     freqs = mymalloc(numfreqs * sizeof(double));
+
+    /* frequencies */
+    MappingArray fns = fns_tune();
+
+    /* durations */
+    MappingArray durs = dur_tune_metronome(setsize / (double)wavinfo.samplerate, 75);
+
 
     /* read music */
     i = 0;
