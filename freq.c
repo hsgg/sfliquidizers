@@ -1,17 +1,14 @@
 #include <math.h>
 #include <complex.h> /* must be before fftw3.h */
-#include <fftw3.h>
 
 #include "libc.h"
 #include "freq.h"
+#include "write_array.h"
 #include "fpDEBUG.h"
 
 struct tmp_fft {
     int size;
     double *in;
-
-    fftw_complex *data;
-    fftw_plan plan;
 
     int freqsize;
     double *afreq;
@@ -22,8 +19,6 @@ struct tmp_fft {
 
 tmp_fft *fft_init(int setsize, int freqsize)
 {
-    INCDBG;
-
     tmp_fft *fft = mymalloc(sizeof(tmp_fft));
 
     fft->size = setsize;
@@ -32,16 +27,6 @@ tmp_fft *fft_init(int setsize, int freqsize)
     fft->in = mymalloc(setsize * sizeof(double));
     fft->afreq = mymalloc(freqsize * sizeof(double));
 
-    /* create data, 'couse that's what's a plan's all about */
-    DBG("Creating a plan...\n");
-    fft->data = fftw_malloc((fft->size/2 + 1) * sizeof(fftw_complex));
-    if (!fft->data) {
-	printf("Error: Could not allocate 'fft->data'.\n");
-	exit(-1);
-    }
-    fft->plan = fftw_plan_dft_r2c_1d(fft->size, fft->in, fft->data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
-
-    DECDBG;
     return fft;
 }
 
@@ -55,9 +40,6 @@ void fft_destroy(tmp_fft *fft)
     /* free */
     free(fft->in);
     free(fft->afreq);
-    fftw_destroy_plan(fft->plan);
-    fftw_free(fft->data);
-    fftw_cleanup();
     free(fft);
 }
 
@@ -65,24 +47,38 @@ void fft_destroy(tmp_fft *fft)
 
 double get_frequency(tmp_fft *fft, double samplerate)
 {
-    INCDBG;
+    static int n = 0; //FIXME: just for debugging
+
     int setsize = fft->size;
+    double *in = fft->in;
     int freqsize = fft->freqsize;
     double *afreq = fft->afreq;
 
     double avg, avg2, mass, stddev;
     int i, j, k;
 
+    double const dt = 1.0 / (double)samplerate;
+    double const df = 20.0;
+    complex double const m_2piI_df_dt = 2 * M_PI * I * df * dt;
+    double const m_1_sqrt_2pi_dt = 1.0 / sqrt(2 * M_PI) * dt;
 
-    /* fft */
-    DBG("Executing the plan...\n");
-    fftw_execute(fft->plan);
 
-    /* convert to real freqs */
-    for (i = 0; (i < freqsize) && (i < fft->size/2 + 1); i++)
-	afreq[i] = cabs(fft->data[i]) / sqrt(fft->size);
-    while (i < freqsize)
-	afreq[i++] = 0.0;
+    DBG("Calculating frequency...\n");
+
+    /* calculate amplitude of each frequency */
+    for (i = 0; i < freqsize; i++) {
+	/* perform integral */
+	afreq[i] = 0.0;
+	for (j = 0; j < setsize; j++) {
+	    register complex double const integrand = cexp(m_2piI_df_dt * i * j) * in[j];
+	    afreq[i] += fabs(creal(integrand) + cimag(integrand));
+	}
+	afreq[i] *= m_1_sqrt_2pi_dt;
+    }
+
+    /*FIXME: only for debuggin */
+    if (n++ == 1)
+	write_to_file("fft.dat", freqsize, afreq, df, 0);
 
 
     /* average intensity, stddev */
@@ -122,20 +118,21 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg = 0.0;
     avg2 = 0.0;
     mass = 0.0;
+    INCDBG;
     for (i = j + 1; i < k; i++) {
-	DBG("Using in average: %lf (%lf)\n", i * samplerate / setsize, afreq[i]);
+	DBG("Using in average: %lf (%lf)\n", i * df, afreq[i]);
 	avg += afreq[i] * i;
 	avg2 += afreq[i] * i * i;
 	mass += afreq[i];
     }
+    DECDBG;
     avg /= mass;
     avg2 /= mass;
-    avg *= samplerate / setsize;
-    avg2 *= (samplerate / setsize) * (samplerate / setsize);
+    avg *= df;
+    avg2 *= df * df;
     stddev = sqrt(avg2 - avg * avg);
     DBG("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
 
 
-    DECDBG;
     return avg;
 }

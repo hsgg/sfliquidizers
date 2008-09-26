@@ -9,36 +9,8 @@
 #include "tune.h"
 #include "freq.h"
 #include "lily.h"
+#include "write_array.h"
 #include "fpDEBUG.h"
-
-
-
-
-
-/********** file data *********/
-
-void write_to_file(char *filename, sf_count_t len, double *values, double xfactor, double xoffset)
-{
-    INCDBG;
-
-    sf_count_t i = 0;
-    FILE *file = fopen(filename, "w");
-
-    DBG("Writing to file \"%s\" with xfactor %lf and xoffset %lf...\n", filename, xfactor, xoffset);
-
-    if (!file) {
-	printf("Could not open %s for writing.\n", filename);
-	exit(2);
-    }
-
-    for (i = 0; i < len; i++) {
-	fprintf(file, "%lf\t%lf\n", i * xfactor + xoffset, values[i]);
-    }
-
-    fclose(file);
-
-    DECDBG;
-}
 
 
 
@@ -167,7 +139,8 @@ int main (int argc, char *argv[])
     write_lilyhead(lilyfile, argv[1]);
 
     /* set sizes */
-    setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
+    //setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
+    setsize = wavinfo.samplerate; //FIXME: temprary
     freqsize = 100;
     fft = fft_init(setsize, freqsize);
     music = fft_inptr(fft);

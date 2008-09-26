@@ -1,1 +1,2 @@
 plot "fft.dat" with lines
+shell
