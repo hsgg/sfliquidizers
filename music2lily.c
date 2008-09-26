@@ -139,8 +139,8 @@ int main (int argc, char *argv[])
     write_lilyhead(lilyfile, argv[1]);
 
     /* set sizes */
-    //setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
-    setsize = wavinfo.samplerate; //FIXME: temprary
+    setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
+    //setsize = wavinfo.samplerate; //FIXME: temprary
     freqsize = 100;
     fft = fft_init(setsize, freqsize);
     music = fft_inptr(fft);

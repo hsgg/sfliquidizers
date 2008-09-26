@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall -O3 -march=pentium-m -mfpmath=sse
-LDFLAGS = -lsndfile
+LDFLAGS = -lsndfile -lfftw3
 
 
 PROG = music2lily
