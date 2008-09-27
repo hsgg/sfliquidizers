@@ -100,8 +100,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg /= freqsize;
     avg2 /= freqsize;
     stddev = sqrt(avg2 - avg * avg);
-    DBG("Average intensity: %lf\n", avg);
-    DBG("Stddev: %lf\n", stddev);
+    DBG("Average intensity: %lf +- %lf\n", avg, stddev);
     DECDBG;
 
 
@@ -119,10 +118,10 @@ double get_frequency(tmp_fft *fft, double samplerate)
     }
 
     /* average around first maximum */
-    j = i;
+    j = (i < freqsize) ? i : freqsize - 1;
     while ((j >= 0) && (afreq[j] > 2.0 * stddev))
 	j--;
-    k = i;
+    k = (i < freqsize) ? i : freqsize - 1;
     while ((k < freqsize) && (afreq[k] > 2.0 * stddev))
 	k++;
     avg = 0.0;
