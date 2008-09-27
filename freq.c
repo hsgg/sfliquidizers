@@ -1,1 +1,1 @@
-freq_fftw3.c
+freq_intg.c

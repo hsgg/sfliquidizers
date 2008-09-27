@@ -141,7 +141,7 @@ int main (int argc, char *argv[])
     /* set sizes */
     setsize = 3.0/440.0*6.0 * wavinfo.samplerate;
     //setsize = wavinfo.samplerate; //FIXME: temprary
-    freqsize = 100;
+    freqsize = 1000;
     fft = fft_init(setsize, freqsize);
     music = fft_inptr(fft);
     numfreqs = wavinfo.frames / setsize + 1;
@@ -155,6 +155,7 @@ int main (int argc, char *argv[])
 
 
     /* read music */
+    DBG("Analysing music...\n");
     i = 0;
     frames = setsize;
     while (frames == setsize) {

@@ -92,6 +92,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
 
 
     /* average intensity, stddev */
+    INCDBG;
     avg = 0.0;
     avg2 = 0.0;
     for (i = 0; i < freqsize; i++) {
@@ -103,6 +104,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     stddev = sqrt(avg2 - avg * avg);
     DBG("Average intensity: %lf\n", avg);
     DBG("Stddev: %lf\n", stddev);
+    DECDBG;
 
 
     /* first maximum above 2 * stddev */
@@ -128,12 +130,14 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg = 0.0;
     avg2 = 0.0;
     mass = 0.0;
+    INCDBG;
     for (i = j + 1; i < k; i++) {
 	DBG("Using in average: %lf (%lf)\n", i * samplerate / setsize, afreq[i]);
 	avg += afreq[i] * i;
 	avg2 += afreq[i] * i * i;
 	mass += afreq[i];
     }
+    DECDBG;
     avg /= mass;
     avg2 /= mass;
     avg *= samplerate / setsize;

@@ -51,6 +51,7 @@ void fft_destroy(tmp_fft *fft)
 
 double get_frequency(tmp_fft *fft, double samplerate)
 {
+    INCDBG;
     int setsize = fft->size;
     double *in = fft->in;
     complex double *cfreq = fft->cfreq;
@@ -61,12 +62,10 @@ double get_frequency(tmp_fft *fft, double samplerate)
     int i, j, k;
 
     double const dt = 1.0 / (double)samplerate;
-    double const df = 20.0;
+    double const df = 10.0;
     complex double const m_2piI_df_dt = 2 * M_PI * I * df * dt;
     complex double const m_1_sqrt_2pi_dt = 1.0 / sqrt(2 * M_PI) * dt;
 
-
-    DBG("Calculating frequency...\n");
 
     /* calculate amplitude of each frequency */
     for (i = 0; i < freqsize; i++) {
@@ -79,7 +78,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     }
 
     /* convert to real freqs */
-    for (i = 0; (i < freqsize) && (i < fft->size/2 + 1); i++)
+    for (i = 0; i < freqsize; i++)
 	afreq[i] = cabs(cfreq[i]);
 
 
@@ -90,6 +89,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
 
 
     /* average intensity, stddev */
+    INCDBG;
     avg = 0.0;
     avg2 = 0.0;
     for (i = 0; i < freqsize; i++) {
@@ -101,6 +101,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     stddev = sqrt(avg2 - avg * avg);
     DBG("Average intensity: %lf\n", avg);
     DBG("Stddev: %lf\n", stddev);
+    DECDBG;
 
 
     /* first maximum above 2 * stddev */
@@ -142,5 +143,6 @@ double get_frequency(tmp_fft *fft, double samplerate)
     DBG("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
 
 
+    DECDBG;
     return avg;
 }

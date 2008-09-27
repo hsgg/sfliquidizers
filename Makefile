@@ -4,7 +4,6 @@ LDFLAGS = -lsndfile -lfftw3
 
 
 PROG = music2lily
-SRC = $(PROG).c
 
 DEPFILE = .depend
 PROGDEPFILE = .progdepend
@@ -17,7 +16,7 @@ all: $(PROGDEPFILE) $(PROG)
 
 # dependecies
 $(DEPFILE): *.c *.h
-	$(CC) -MM $(SRC) > $(DEPFILE)
+	$(CC) -MM *.c > $(DEPFILE)
 
 $(PROGDEPFILE): $(DEPFILE)
 	# Technically, the dependecies-only should be removed.

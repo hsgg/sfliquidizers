@@ -2,7 +2,7 @@
 #define FP_DEBUG_H
 
 
-#define DEBUG 0
+#define DEBUG 1
 
 
 
