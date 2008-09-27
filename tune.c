@@ -71,10 +71,12 @@ MappingArray dur_tune_metronome(double const unit, double quarter)
 {
     MappingArray durs = {};
     int length = 16;
-    int lowermax = 4.0 / length * quarter / unit * 0.75;
+    int lowermax;
 
     /* Length of a quarter note in seconds */
     quarter = 60.0 / quarter;
+
+    lowermax = 4.0 / length * quarter / unit * 0.75;
 
     do {
 	int i = durs.size;

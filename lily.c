@@ -37,7 +37,7 @@ void write_lilytail(FILE *lilyfile)
     fprintf(lilyfile, "%% Score\n");
     fprintf(lilyfile, "\\score {\n");
     fprintf(lilyfile, "  \\new Staff = \"Tenor\" {\n");
-    fprintf(lilyfile, "    \\clef alto\n");
+    fprintf(lilyfile, "    \\clef treble\n");
     fprintf(lilyfile, "    \\time 4/4\n");
     fprintf(lilyfile, "    \\music\n");
     fprintf(lilyfile, "  }\n\n");

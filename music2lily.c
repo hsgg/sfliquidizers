@@ -139,7 +139,7 @@ int main (int argc, char *argv[])
     write_lilyhead(lilyfile, argv[1]);
 
     /* set sizes */
-    setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
+    setsize = 3.0/440.0*6.0 * wavinfo.samplerate;
     //setsize = wavinfo.samplerate; //FIXME: temprary
     freqsize = 100;
     fft = fft_init(setsize, freqsize);
@@ -151,7 +151,7 @@ int main (int argc, char *argv[])
     MappingArray fns = fns_tune();
 
     /* durations */
-    MappingArray durs = dur_tune_metronome(setsize / (double)wavinfo.samplerate, 75);
+    MappingArray durs = dur_tune_metronome(setsize / (double)wavinfo.samplerate, 87);
 
 
     /* read music */

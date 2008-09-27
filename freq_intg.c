@@ -27,7 +27,7 @@ tmp_fft *fft_init(int setsize, int freqsize)
     fft->freqsize = freqsize;
 
     fft->in = mymalloc(setsize * sizeof(double));
-    fft->cfreq = mymalloc(freqsize * sizeof(double));
+    fft->cfreq = mymalloc(freqsize * sizeof(complex double));
     fft->afreq = mymalloc(freqsize * sizeof(double));
 
     return fft;
@@ -118,10 +118,10 @@ double get_frequency(tmp_fft *fft, double samplerate)
 
     /* average around first maximum */
     j = i;
-    while (afreq[j] > 2.0 * stddev)
+    while ((j >= 0) && (afreq[j] > 2.0 * stddev))
 	j--;
     k = i;
-    while (afreq[k] > 2.0 * stddev)
+    while ((k < freqsize) && (afreq[k] > 2.0 * stddev))
 	k++;
     avg = 0.0;
     avg2 = 0.0;
