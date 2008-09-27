@@ -6,7 +6,7 @@
 
 static void print_mapping(Mapping *m)
 {
-    DBG("%p-> %-5s = %4d < %7.2lf < %4d, \t range %2d %+6.2lf %+6.2lf\n", m,
+    DBG("%p-> %-6s = %4d < %7.2lf < %4d, \t range %2d %+6.2lf %+6.2lf\n", m,
 	    m->note, m->min, m->avg, m->max,
 	    m->max - m->min, m->min - m->avg, m->max - m->avg);
 }
@@ -14,7 +14,7 @@ static void print_mapping(Mapping *m)
 
 MappingArray fns_tune()
 {
-    Mapping freqsandnotes[] = {
+    /* Mapping freqsandnotes[] = {
 	{ 288, 293, 296, "d'" },
 	{ 318, 325, 331, "e'" },
 	{ 365, 367, 369, "fis'" },
@@ -23,6 +23,17 @@ MappingArray fns_tune()
 	{ 480, 487, 491, "b'" },
 	{ 550, 555, 561, "cis''" },
 	{ 585, 587, 588, "d''" }
+    }; */
+    Mapping freqsandnotes[] = {
+	{ 291, 297, 306, "d'" },
+	{ 327, 336, 344, "e'" },
+	{ 368, 377, 388, "fis'" },
+	{ 386, 395, 404, "g'" },
+	{ 436, 444, 452, "a'" },
+	{ 492, 500, 508, "b'" },
+	{ 516, 525, 534, "c''" },
+	{ 586, 595, 604, "d''" },
+	{ 659, 667, 675, "e''" },
     };
 
     DBG("Setting up note pitch ranges...\n");

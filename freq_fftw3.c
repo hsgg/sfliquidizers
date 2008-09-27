@@ -143,7 +143,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg *= samplerate / setsize;
     avg2 *= (samplerate / setsize) * (samplerate / setsize);
     stddev = sqrt(avg2 - avg * avg);
-    DBG("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
+    DBG("Weighted average around first maximum: %.2lf +- %.2lf (%lf)\n", avg, stddev, mass);
 
 
     DECDBG;

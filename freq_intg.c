@@ -62,7 +62,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     int i, j, k;
 
     double const dt = 1.0 / (double)samplerate;
-    double const df = 10.0;
+    double const df = 5.0;
     complex double const m_2piI_df_dt = 2 * M_PI * I * df * dt;
     complex double const m_1_sqrt_2pi_dt = 1.0 / sqrt(2 * M_PI) * dt;
 
@@ -82,10 +82,11 @@ double get_frequency(tmp_fft *fft, double samplerate)
 	afreq[i] = cabs(cfreq[i]);
 
 
-    /*FIXME: only for debuggin */
+#   ifdef DEBUG
     static int n = 0;
-    if (n++ == 0)
+    if (++n == 1)
 	write_to_file("fft.dat", freqsize, afreq, df, 0);
+#   endif
 
 
     /* average intensity, stddev */
@@ -140,7 +141,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg *= df;
     avg2 *= df * df;
     stddev = sqrt(avg2 - avg * avg);
-    DBG("Weighted average around first maximum: %lf +- %lf (%lf)\n", avg, stddev, mass);
+    DBG("%d: Weighted average around first maximum: %.2lf +- %.2lf (%lf)\n", n, avg, stddev, mass);
 
 
     DECDBG;

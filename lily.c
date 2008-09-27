@@ -23,10 +23,10 @@ void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
     char *dur = get_str(durs, duration);
 
     if (dur && note) {
-	DBG(">>> dur = %d >>> Printing %s%s.\n", duration, note, dur);
+	DBG(">>> dur = %d >>> Printing %s%s\n", duration, note, dur);
 	fprintf(lilyfile, "%s%s ", note, dur);
     } else {
-	DBG("<<< dur = %d <<< NOT printing %s%s.\n", duration, note, dur);
+	DBG("<<< dur = %d <<< NOT printing %s%s\n", duration, note, dur);
     }
 }
 
@@ -38,7 +38,7 @@ void write_lilytail(FILE *lilyfile)
     fprintf(lilyfile, "\\score {\n");
     fprintf(lilyfile, "  \\new Staff = \"Tenor\" {\n");
     fprintf(lilyfile, "    \\clef treble\n");
-    fprintf(lilyfile, "    \\time 4/4\n");
+    fprintf(lilyfile, "    \\time 3/4\n");
     fprintf(lilyfile, "    \\music\n");
     fprintf(lilyfile, "  }\n\n");
 
