@@ -141,7 +141,7 @@ int main (int argc, char *argv[])
     /* set sizes */
     DBG("Set sizes...\n");
     INCDBG;
-    setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
+    setsize = 2.0/440.0*6.0 * wavinfo.samplerate;
     //setsize = wavinfo.samplerate; //FIXME: temprary
     freqsize = 200;
     double const df = wavinfo.samplerate / (double)setsize;
@@ -170,8 +170,7 @@ int main (int argc, char *argv[])
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
-	f = get_frequency(fft, wavinfo.samplerate);
-	freqs[i++] = f;
+	f = freqs[i++] = get_frequency(fft, wavinfo.samplerate);
 	if (!(note = get_str(&fns, f)))
 	    note = lastnote;
 

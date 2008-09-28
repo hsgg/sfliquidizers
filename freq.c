@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+#include <unistd.h>
 #include <math.h>
 #include <complex.h> /* must be before fftw3.h */
 #include <fftw3.h>
@@ -117,7 +119,7 @@ static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
     int i, j;
 
     complex double const m_2piI_df_dt = 2 * M_PI * I * df * dt;
-    complex double const m_1_sqrt_2pi_dt = 1.0 / sqrt(2 * M_PI) * dt;
+    complex double const m_1_sqrt_2pi_dt = dt;
 
 
     /* calculate amplitude of each frequency */
@@ -144,20 +146,28 @@ double get_frequency(tmp_fft *fft, double samplerate)
 {
     INCDBG;
 
-    double avg, avg2, mass, stddev;
+    double const sigma = 2.0;
+
+    double avg, avg2, mass, stddev, freqstddev;
     int i, j, k;
 
-    //double const df = 10.0;
-    //double * const afreq = get_fft_intg(fft, df, 1.0 / (double)samplerate);
-    double const df = samplerate / (double)fft->size;
-    double * const afreq = get_fft_fftw3(fft);
+    double const dt = 1.0 / (double)samplerate;
+
+    double const df = 10.0;
+    double * const afreq = get_fft_intg(fft, df, dt);
+    //double const df = samplerate / (double)fft->size;
+    //double * const afreq = get_fft_fftw3(fft);
 
     int const freqsize = get_fftsize(fft);
 
 #   ifdef DEBUG
     static int n = 0;
-    if (++n == 1)
-	write_to_file("fft.dat", freqsize, afreq, df, 0);
+    n++;
+    char *filename = print2string(NULL, "fft/fft%4.4d", n);
+    if (access("fft", W_OK) != 0)
+	mkdir("fft", 0777);
+    write_to_file(filename, freqsize, afreq, df, 0);
+    free(filename);
 #   endif
 
 
@@ -182,7 +192,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     while (i < freqsize) {
 	if (afreq[i] > mass)
 	    mass = afreq[i];
-	else if (mass > 2.0 * stddev) {
+	else if (mass > sigma * stddev) {
 	    i--;
 	    break;
 	}
@@ -191,10 +201,10 @@ double get_frequency(tmp_fft *fft, double samplerate)
 
     /* average around first maximum */
     j = (i < freqsize) ? i : freqsize - 1;
-    while ((j >= 0) && (afreq[j] > 2.0 * stddev))
+    while ((j >= 0) && (afreq[j] > sigma * stddev))
 	j--;
     k = (i < freqsize) ? i : freqsize - 1;
-    while ((k < freqsize) && (afreq[k] > 2.0 * stddev))
+    while ((k < freqsize) && (afreq[k] > sigma * stddev))
 	k++;
     avg = 0.0;
     avg2 = 0.0;
@@ -211,8 +221,9 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg2 /= mass;
     avg *= df;
     avg2 *= df * df;
-    stddev = sqrt(avg2 - avg * avg);
-    DBG("%d: Weighted average around first maximum: %.2lf +- %.2lf (%lf)\n", n, avg, stddev, mass);
+    freqstddev = sqrt(avg2 - avg * avg);
+    DBG("%3d (%.2lf sec): freq = %.2lf +- %5.2lf (mass=%lf, stddev=%lf)\n",
+	    n, n * dt * fft->size, avg, freqstddev, mass, stddev);
 
     DECDBG;
     return avg;
