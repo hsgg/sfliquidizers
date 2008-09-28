@@ -1,16 +1,20 @@
 #include <math.h>
-#include <complex.h>
+#include <complex.h> /* must be before fftw3.h */
+#include <fftw3.h>
 
 #include "libc.h"
 #include "freq.h"
 #include "write_array.h"
 #include "fpDEBUG.h"
 
+
 struct tmp_fft {
     int size;
     double *in;
 
     complex double *cfreq;
+    fftw_complex *data;
+    fftw_plan plan;
 
     int freqsize;
     double *afreq;
@@ -21,6 +25,8 @@ struct tmp_fft {
 
 tmp_fft *fft_init(int setsize, int freqsize)
 {
+    INCDBG;
+
     tmp_fft *fft = mymalloc(sizeof(tmp_fft));
 
     fft->size = setsize;
@@ -30,8 +36,23 @@ tmp_fft *fft_init(int setsize, int freqsize)
     fft->cfreq = mymalloc(freqsize * sizeof(complex double));
     fft->afreq = mymalloc(freqsize * sizeof(double));
 
+    /* create data, 'couse that's what's a plan's all about */
+    DBG("Creating a plan...\n");
+    fft->data = fftw_malloc((fft->size/2 + 1) * sizeof(fftw_complex));
+    if (!fft->data) {
+	printf("Error: Could not allocate 'fft->data'.\n");
+	exit(-1);
+    }
+    fft->plan = fftw_plan_dft_r2c_1d(fft->size, fft->in, fft->data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
+
+    DECDBG;
     return fft;
 }
+
+
+
+
+
 
 void fft_destroy(tmp_fft *fft)
 {
@@ -39,6 +60,9 @@ void fft_destroy(tmp_fft *fft)
     free(fft->in);
     free(fft->cfreq);
     free(fft->afreq);
+    fftw_destroy_plan(fft->plan);
+    fftw_free(fft->data);
+    fftw_cleanup();
     free(fft);
 }
 
@@ -55,6 +79,31 @@ static int get_fftsize(tmp_fft *fft)
     return fft->freqsize;
 }
 
+
+
+static double *get_fft_fftw3(tmp_fft *fft)
+{
+    INCDBG;
+    int setsize = fft->size;
+    int freqsize = fft->freqsize;
+    double *afreq = fft->afreq;
+
+    int i;
+
+
+    /* fft */
+    DBG("Executing the plan...\n");
+    fftw_execute(fft->plan);
+
+    /* convert to real freqs */
+    for (i = 0; (i < freqsize) && (i < setsize/2 + 1); i++)
+	afreq[i] = cabs(fft->data[i]) / sqrt(setsize);
+    while (i < freqsize)
+	afreq[i++] = 0.0;
+
+    DECDBG;
+    return afreq;
+}
 
 static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
 {
@@ -73,7 +122,6 @@ static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
 
     /* calculate amplitude of each frequency */
     for (i = 0; i < freqsize; i++) {
-	/* perform integral */
 	cfreq[i] = 0.0;
 	for (j = 0; j < setsize; j++) {
 	    cfreq[i] += cexp(m_2piI_df_dt * i * j) * in[j];
@@ -99,10 +147,12 @@ double get_frequency(tmp_fft *fft, double samplerate)
     double avg, avg2, mass, stddev;
     int i, j, k;
 
-    double const dt = 1.0 / (double)samplerate;
-    double const df = 5.0;
+    //double const df = 10.0;
+    //double * const afreq = get_fft_intg(fft, df, 1.0 / (double)samplerate);
+    double const df = samplerate / (double)fft->size;
+    double * const afreq = get_fft_fftw3(fft);
+
     int const freqsize = get_fftsize(fft);
-    double * const afreq = get_fft_intg(fft, df, dt);
 
 #   ifdef DEBUG
     static int n = 0;

@@ -139,13 +139,22 @@ int main (int argc, char *argv[])
     write_lilyhead(lilyfile, argv[1]);
 
     /* set sizes */
+    DBG("Set sizes...\n");
+    INCDBG;
     setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
     //setsize = wavinfo.samplerate; //FIXME: temprary
     freqsize = 200;
+    double const df = wavinfo.samplerate / (double)setsize;
+    double const dt = 1.0 / (double)wavinfo.samplerate;
+    double const delta_t = dt * setsize;
+    DBG("Frequency granularity: df = %.2lf Hz (%.2lf ms)\n", df, 1000.0 / df);
+    DBG("Time granularity: dt = %lf ms (%.2lf Hz)\n", 1000.0 * dt, 1.0 / dt);
+    DBG("Time interval: %lf ms (%.2lf Hz)\n", 1000.0 * delta_t, 1.0 / delta_t);
     fft = fft_init(setsize, freqsize);
     music = fft_inptr(fft);
     numfreqs = wavinfo.frames / setsize + 1;
     freqs = mymalloc(numfreqs * sizeof(double));
+    DECDBG;
 
     /* frequencies */
     MappingArray fns = fns_tune();
