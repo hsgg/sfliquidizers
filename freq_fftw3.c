@@ -64,7 +64,7 @@ void fft_destroy(tmp_fft *fft)
 
 
 
-double get_frequency(tmp_fft *fft, double samplerate)
+double *get_fft_fftw3(tmp_fft *fft, double samplerate)
 {
     INCDBG;
     int setsize = fft->size;
@@ -89,61 +89,6 @@ double get_frequency(tmp_fft *fft, double samplerate)
     static int n = 0;
     if (n++ == 0)
 	write_to_file("fft.dat", freqsize, afreq, samplerate / setsize, 0);
-
-
-    /* average intensity, stddev */
-    INCDBG;
-    avg = 0.0;
-    avg2 = 0.0;
-    for (i = 0; i < freqsize; i++) {
-	avg += afreq[i];
-	avg2 += afreq[i] * afreq[i];
-    }
-    avg /= freqsize;
-    avg2 /= freqsize;
-    stddev = sqrt(avg2 - avg * avg);
-    DBG("Average intensity: %lf\n", avg);
-    DBG("Stddev: %lf\n", stddev);
-    DECDBG;
-
-
-    /* first maximum above 2 * stddev */
-    mass = 0.0;
-    i = 0;
-    while (i < freqsize) {
-	if (afreq[i] > mass)
-	    mass = afreq[i];
-	else if (mass > 2.0 * stddev) {
-	    i--;
-	    break;
-	}
-	i++;
-    }
-
-    /* average around first maximum */
-    j = i;
-    while ((j >= 0) && (afreq[j] > 2.0 * stddev))
-	j--;
-    k = i;
-    while ((k < freqsize) && (afreq[k] > 2.0 * stddev))
-	k++;
-    avg = 0.0;
-    avg2 = 0.0;
-    mass = 0.0;
-    INCDBG;
-    for (i = j + 1; i < k; i++) {
-	DBG("Using in average: %lf (%lf)\n", i * samplerate / setsize, afreq[i]);
-	avg += afreq[i] * i;
-	avg2 += afreq[i] * i * i;
-	mass += afreq[i];
-    }
-    DECDBG;
-    avg /= mass;
-    avg2 /= mass;
-    avg *= samplerate / setsize;
-    avg2 *= (samplerate / setsize) * (samplerate / setsize);
-    stddev = sqrt(avg2 - avg * avg);
-    DBG("Weighted average around first maximum: %.2lf +- %.2lf (%lf)\n", avg, stddev, mass);
 
 
     DECDBG;
