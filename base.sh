@@ -10,6 +10,6 @@ fi
 
 PATH="$PATH:."
 
-music2lily "$base.wav" "$base.ly" \
+time music2lily "$base.wav" "$base.ly" \
 && lilypond "$base.ly" \
 && evince "$base.pdf" \

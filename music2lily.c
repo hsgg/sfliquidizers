@@ -80,7 +80,7 @@ void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INF
 int main (int argc, char *argv[])
 {
     int status = 0;
-    int i;
+    int i, j;
     SNDFILE *file = NULL;
     SF_INFO wavinfo = {};
     int setsize = 0;
@@ -89,12 +89,14 @@ int main (int argc, char *argv[])
     double *music = NULL;
     int numfreqs = 0;
     double *freqs = NULL;
+    double *lengths = NULL;
     double f;
     char *note = NULL;
     char *lastnote = NULL;
     int duration = 0;
     FILE *lilyfile = NULL;
     tmp_fft *fft;
+    int metronome = 87;
 
 
     if (argc != 3) {
@@ -136,53 +138,62 @@ int main (int argc, char *argv[])
 	exit (3);
     }
 
-    write_lilyhead(lilyfile, argv[1]);
 
     /* set sizes */
     DBG("Set sizes...\n");
-    INCDBG;
-    setsize = 2.0/440.0*6.0 * wavinfo.samplerate;
-    //setsize = wavinfo.samplerate; //FIXME: temprary
-    freqsize = 200;
-    double const df = wavinfo.samplerate / (double)setsize;
-    double const dt = 1.0 / (double)wavinfo.samplerate;
-    double const delta_t = dt * setsize;
-    DBG("Frequency granularity: df = %.2lf Hz (%.2lf ms)\n", df, 1000.0 / df);
-    DBG("Time granularity: dt = %lf ms (%.2lf Hz)\n", 1000.0 * dt, 1.0 / dt);
-    DBG("Time interval: %lf ms (%.2lf Hz)\n", 1000.0 * delta_t, 1.0 / delta_t);
-    fft = fft_init(setsize, freqsize);
-    music = fft_inptr(fft);
-    numfreqs = wavinfo.frames / setsize + 1;
-    freqs = mymalloc(numfreqs * sizeof(double));
-    DECDBG;
+    {
+	INCDBG;
+	setsize = 1.0/440.0*6.0 * wavinfo.samplerate;
+	freqsize = 100;
+	DBG("setsize = %d\n", setsize);
+	DBG("freqsize = %d\n", freqsize);
+	double const df = wavinfo.samplerate / (double)setsize;
+	double const dt = 1.0 / (double)wavinfo.samplerate;
+	double const delta_t = dt * setsize;
+	DBG("Frequency granularity: df = %.2lf Hz (%.2lf ms)\n", df, 1000.0 / df);
+	DBG("Time granularity: dt = %lf ms (%.2lf Hz)\n", 1000.0 * dt, 1.0 / dt);
+	DBG("Time interval: %lf ms (%.2lf Hz)\n", 1000.0 * delta_t, 1.0 / delta_t);
+	fft = fft_init(setsize, freqsize);
+	music = fft_inptr(fft);
+	numfreqs = wavinfo.frames / setsize + 1;
+	freqs = mymalloc(numfreqs * sizeof(double));
+	lengths = mymalloc(numfreqs * sizeof(double));
+	DBG("metronome = %d\n", metronome);
+	DECDBG;
+    }
 
     /* frequencies */
     MappingArray fns = fns_tune();
 
     /* durations */
-    MappingArray durs = dur_tune_metronome(setsize / (double)wavinfo.samplerate, 85);
+    MappingArray durs = dur_tune_metronome(setsize / (double)wavinfo.samplerate,
+	    metronome);
 
 
     /* read music */
     DBG("Analysing music...\n");
     i = 0;
+    j = 0;
+    write_lilyhead(lilyfile, argv[1]);
     frames = setsize;
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
 	f = freqs[i++] = get_frequency(fft, wavinfo.samplerate);
+
+	/*note = get_str(&fns, f);*/
 	if (!(note = get_str(&fns, f)))
 	    note = lastnote;
 
 	if ((note == lastnote) || (duration == 0)) {
 	    duration++;
-	    lastnote = note;
 	} else {
 	    /* print last note */
 	    print_note(&durs, lilyfile, lastnote, duration);
+	    lengths[j++] = duration;
 	    duration = 0;
-	    lastnote = note;
 	}
+	lastnote = note;
     }
     /* print last note */
     if (lastnote != note) {
@@ -190,10 +201,18 @@ int main (int argc, char *argv[])
 	exit(6);
     }
     print_note(&durs, lilyfile, lastnote, duration);
+    lengths[j++] = duration;
+    write_lilytail(lilyfile, metronome);
 
-    write_to_file("freqs.dat", numfreqs, freqs, (double)setsize / wavinfo.samplerate, 0.0);
-
-    write_lilytail(lilyfile);
+    /* save detected frequencies and durations */
+    if (i != numfreqs) {
+	printf("Darn, I really don't understand this algorithm!\n");
+	exit(7);
+    }
+    write_to_file("freqs.dat", numfreqs, freqs,
+	    setsize / (double)wavinfo.samplerate, 0.0);
+    write_to_file("durs.dat", j, lengths, 1, 0);
+    write_histogram("durs_histo.dat", j, lengths, 5, get_maximalmax(&durs));
 
     /* synthesize frequencies */
     synthesize("synth.wav", freqs, numfreqs, setsize, wavinfo);

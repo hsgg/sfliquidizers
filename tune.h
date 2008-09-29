@@ -20,6 +20,7 @@ MappingArray dur_tune();
 MappingArray dur_tune_metronome(double const unit, double quarter);
 
 char *get_str(MappingArray *map, double value);
+int get_maximalmax(MappingArray *map);
 
 
 #endif

@@ -83,7 +83,7 @@ static int get_fftsize(tmp_fft *fft)
 
 
 
-static double *get_fft_fftw3(tmp_fft *fft)
+/*static double *get_fft_fftw3(tmp_fft *fft)
 {
     INCDBG;
     int setsize = fft->size;
@@ -93,11 +93,11 @@ static double *get_fft_fftw3(tmp_fft *fft)
     int i;
 
 
-    /* fft */
+    [> fft <]
     DBG("Executing the plan...\n");
     fftw_execute(fft->plan);
 
-    /* convert to real freqs */
+    [> convert to real freqs <]
     for (i = 0; (i < freqsize) && (i < setsize/2 + 1); i++)
 	afreq[i] = cabs(fft->data[i]) / sqrt(setsize);
     while (i < freqsize)
@@ -105,7 +105,7 @@ static double *get_fft_fftw3(tmp_fft *fft)
 
     DECDBG;
     return afreq;
-}
+}*/
 
 static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
 {
@@ -211,10 +211,11 @@ double get_frequency(tmp_fft *fft, double samplerate)
     mass = 0.0;
     INCDBG;
     for (i = j + 1; i < k; i++) {
+	register double const weight = afreq[i];
 	DBG("Using in average: %lf (%lf)\n", i * df, afreq[i]);
-	avg += afreq[i] * i;
-	avg2 += afreq[i] * i * i;
-	mass += afreq[i];
+	avg += weight * i;
+	avg2 += weight * i * i;
+	mass += weight;
     }
     DECDBG;
     avg /= mass;
@@ -222,7 +223,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg *= df;
     avg2 *= df * df;
     freqstddev = sqrt(avg2 - avg * avg);
-    DBG("%3d (%.2lf sec): freq = %.2lf +- %5.2lf (mass=%lf, stddev=%lf)\n",
+    DBG("%3d (%.2lf sec): freq = %.2lf +- %5.2lf (mass = %.2le, stddev = %.2le)\n",
 	    n, n * dt * fft->size, avg, freqstddev, mass, stddev);
 
     DECDBG;

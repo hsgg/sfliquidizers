@@ -103,14 +103,14 @@ MappingArray dur_tune_metronome(double const unit, double quarter)
 
 	durs.m[i].avg = 4.0 / length * quarter / unit;
 	durs.m[i].min = lowermax;
-	durs.m[i].max = lowermax = round(durs.m[i].avg * 1.10);
+	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
 	durs.m[i].note = print2string(NULL, "%d", length);
 	print_mapping(&durs.m[i]);
 
 	i++;
 	durs.m[i].avg = 1.5 * 4.0 / length * quarter / unit;
 	durs.m[i].min = lowermax;
-	durs.m[i].max = lowermax = round(durs.m[i].avg * 1.10);
+	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
 	durs.m[i].note = print2string(NULL, "%d.", length);
 	print_mapping(&durs.m[i]);
     } while ((length /= 2) >= 1);
@@ -134,4 +134,31 @@ char *get_str(MappingArray *map, double value)
     }
 
     return str;
+}
+
+
+int get_maximalmax(MappingArray *map)
+{
+    INCDBG;
+    int max = 0;
+    int i = map->size;
+
+    while (i--) {
+	Mapping m = map->m[i];
+
+	DBG("%d: max = %d\n", i, max);
+	print_mapping(&m);
+
+	if (m.min > max)
+	    max = m.min;
+
+	if ((int)m.avg > max)
+	    max = m.avg;
+
+	if (m.max > max)
+	    max = m.max;
+    }
+
+    DECDBG;
+    return max;
 }

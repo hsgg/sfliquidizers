@@ -8,7 +8,7 @@ void write_lilyhead(FILE *lilyfile, char *name);
 
 void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration);
 
-void write_lilytail(FILE *lilyfile);
+void write_lilytail(FILE *lilyfile, int metronome);
 
 
 #endif

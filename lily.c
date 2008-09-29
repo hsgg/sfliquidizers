@@ -30,8 +30,10 @@ void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
     }
 }
 
-void write_lilytail(FILE *lilyfile)
+void write_lilytail(FILE *lilyfile, int metronome)
 {
+    fprintf(lilyfile, "\n");
+    fprintf(lilyfile, "\\bar \"|.\"\n");
     fprintf(lilyfile, "}\n\n");
 
     fprintf(lilyfile, "%% Score\n");
@@ -46,6 +48,11 @@ void write_lilytail(FILE *lilyfile)
     fprintf(lilyfile, "  }\n\n");
 
     fprintf(lilyfile, "  \\midi {\n");
+    fprintf(lilyfile, "    \\context {\n");
+    fprintf(lilyfile, "      \\Score\n");
+    fprintf(lilyfile, "      tempoWholesPerMinute = #(ly:make-moment %d 4)\n",
+	    metronome);
+    fprintf(lilyfile, "    }\n");
     fprintf(lilyfile, "  }\n");
 
     fprintf(lilyfile, "}\n");

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "libc.h"
 #include "write_array.h"
 #include "fpDEBUG.h"
 
@@ -24,6 +25,37 @@ void write_to_file(char *filename, int len, double *values, double xfactor, doub
     }
 
     fclose(file);
+
+    DECDBG;
+}
+
+
+void write_histogram(char *filename, int len, double *values, double binsize, double maxvalue)
+{
+    INCDBG;
+
+    int i = 0;
+    int histsize = maxvalue / binsize + 1;
+    double *histo = mymalloc(histsize * sizeof(double));
+
+    DBG("Calculating histogram with binsize %lf and maxvalue %lf...\n",
+	    binsize, maxvalue);
+
+    /* initialize */
+    for (i = 0; i < histsize; i++)
+	histo[i] = 0;
+
+    /* calculate histogram */
+    for (i = 0; i < len; i++) {
+	register int const bin = values[i] / binsize;
+	if (bin >= histsize)
+	    printf("Ignoring too high value %lf in histogram!\n", values[i]);
+	histo[bin]++;
+    }
+
+    write_to_file(filename, histsize, histo, binsize, 0);
+
+    free(histo);
 
     DECDBG;
 }
