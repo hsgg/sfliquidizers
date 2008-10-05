@@ -1,0 +1,14 @@
+singul(w,f) = 1 - (w*w)/(f*f)
+
+cc(w,f,t) = cos(w*t) * cos(f*t)
+cs(w,f,t) = cos(w*t) * sin(f*t)
+sc(w,f,t) = sin(w*t) * cos(f*t)
+ss(w,f,t) = sin(w*t) * sin(f*t)
+
+realpart(w,f,a,b) = cc(w,f,b) - cc(w,f,a) - (w / f) * (ss(w,f,b) - ss(w,f,a))
+imagpart(w,f,a,b) = sc(w,f,b) - sc(w,f,a) + (w / f) * (cs(w,f,b) - cs(w,f,a))
+
+absolute(w,f,a,b) = sqrt(realpart(w,f,a,b) * realpart(w,f,a,b) \
+	+ imagpart(w,f,a,b) * imagpart(w,f,a,b))
+
+A(w,f,a,b) = abs(absolute(w,f,a,b) / (f * singul(w,f)))
