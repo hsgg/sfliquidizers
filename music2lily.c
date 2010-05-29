@@ -1,4 +1,4 @@
-/* vim: sts=4, sw=4 */
+/* vim: set sts=4 sw=4 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -126,7 +126,7 @@ int main (int argc, char *argv[])
     DBG("comment: %s\n", sf_get_string(file, SF_STR_COMMENT));
     DBG("date: %s\n", sf_get_string(file, SF_STR_DATE));
 
-    DBG("frames: %lld\n", wavinfo.frames);
+    DBG("frames: %ld\n", wavinfo.frames);
     DBG("samplerate: %d\n", wavinfo.samplerate);
     DBG("channels: %d\n", wavinfo.channels);
     DBG("format: %d\n", wavinfo.format);

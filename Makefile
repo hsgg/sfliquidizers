@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -Werror -O3 -march=pentium-m -mfpmath=sse
+CFLAGS = -g -Wall -Werror -O2 -mfpmath=sse
 LDFLAGS = -lsndfile -lfftw3
 
 
