@@ -2,7 +2,19 @@
 #include <unistd.h>
 #include <math.h>
 #include <complex.h> /* must be before fftw3.h */
-#include <fftw3.h>
+
+#ifdef USE_FFTW3
+# include <fftw3.h>
+#else
+  /* define dummies */
+  typedef complex double fftw_complex;
+  typedef int fftw_plan;
+# define fftw_malloc malloc
+# define fftw_plan_dft_r2c_1d(a, b, c, d) 0
+# define fftw_destroy_plan(a) /* nothing */
+# define fftw_free(a) /* nothing */
+# define fftw_cleanup() /* nothing */
+#endif
 
 #include "libc.h"
 #include "freq.h"
@@ -82,8 +94,8 @@ static int get_fftsize(tmp_fft *fft)
 }
 
 
-
-/*static double *get_fft_fftw3(tmp_fft *fft)
+#ifdef USE_FFTW3
+static double *get_fft_fftw3(tmp_fft *fft)
 {
     INCDBG;
     int setsize = fft->size;
@@ -93,11 +105,11 @@ static int get_fftsize(tmp_fft *fft)
     int i;
 
 
-    [> fft <]
+    /* fft */
     DBG("Executing the plan...\n");
     fftw_execute(fft->plan);
 
-    [> convert to real freqs <]
+    /* convert to real freqs */
     for (i = 0; (i < freqsize) && (i < setsize/2 + 1); i++)
 	afreq[i] = cabs(fft->data[i]) / sqrt(setsize);
     while (i < freqsize)
@@ -105,8 +117,8 @@ static int get_fftsize(tmp_fft *fft)
 
     DECDBG;
     return afreq;
-}*/
-
+}
+#else
 static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
 {
     INCDBG;
@@ -138,6 +150,7 @@ static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
     DECDBG;
     return afreq;
 }
+#endif
 
 
 /****** calculate frequency *****/
@@ -153,10 +166,14 @@ double get_frequency(tmp_fft *fft, double samplerate)
 
     double const dt = 1.0 / (double)samplerate;
 
+
+#   ifdef USE_FFTW3
+    double const df = samplerate / (double)fft->size;
+    double * const afreq = get_fft_fftw3(fft);
+#   else
     double const df = 10.0;
     double * const afreq = get_fft_intg(fft, df, dt);
-    //double const df = samplerate / (double)fft->size;
-    //double * const afreq = get_fft_fftw3(fft);
+#   endif
 
     int const freqsize = get_fftsize(fft);
 
