@@ -12,7 +12,7 @@
 # define fftw_malloc malloc
 # define fftw_plan_dft_r2c_1d(a, b, c, d) 0
 # define fftw_destroy_plan(a) /* nothing */
-# define fftw_free(a) /* nothing */
+# define fftw_free(p) free(p)
 # define fftw_cleanup() /* nothing */
 #endif
 
@@ -22,60 +22,68 @@
 #include "fpDEBUG.h"
 
 
-struct tmp_fft {
-    int size;
+struct fft_cache {
+    int insize;
     double *in;
 
-    complex double *cfreq;
-    fftw_complex *data;
+    int fftsize;
     fftw_plan plan;
+
+    fftw_complex *cfreq;
 
     int freqsize;
     double *afreq;
+    double *pfreq;
 };
+
+static void *my_aligned_malloc(size_t const nbytes)
+{
+    void *ptr;
+    ptr = fftw_malloc(nbytes);
+    if (!ptr) {
+	printf("Error: Could not allocate %zu bytes of aligned memory.\n",
+		nbytes);
+	exit(-1);
+    }
+    return ptr;
+}
 
 
 /***** create, destroy *****/
 
-tmp_fft *fft_init(int setsize, int freqsize)
+fft_cache *fft_init(int insize, int freqsize)
 {
     INCDBG;
 
-    tmp_fft *fft = mymalloc(sizeof(tmp_fft));
+    fft_cache *fft = mymalloc(sizeof(*fft));
 
-    fft->size = setsize;
+    fft->insize = insize;
+    fft->fftsize = insize / 2 + 1;
     fft->freqsize = freqsize;
+    int cfreqsize = (freqsize > fft->fftsize ? freqsize : fft->fftsize);
 
-    fft->in = mymalloc(setsize * sizeof(double));
-    fft->cfreq = mymalloc(freqsize * sizeof(complex double));
-    fft->afreq = mymalloc(freqsize * sizeof(double));
+    fft->in = my_aligned_malloc(insize * sizeof(double));
+    fft->cfreq = my_aligned_malloc(cfreqsize * sizeof(fftw_complex));
+    fft->afreq = my_aligned_malloc(freqsize * sizeof(double));
+    fft->pfreq = my_aligned_malloc(freqsize * sizeof(double));
 
     /* create data, 'couse that's what's a plan's all about */
     DBG("Creating a plan...\n");
-    fft->data = fftw_malloc((fft->size/2 + 1) * sizeof(fftw_complex));
-    if (!fft->data) {
-	printf("Error: Could not allocate 'fft->data'.\n");
-	exit(-1);
-    }
-    fft->plan = fftw_plan_dft_r2c_1d(fft->size, fft->in, fft->data, FFTW_ESTIMATE); //TODO use FFTW_MEASURE
+    fft->plan = fftw_plan_dft_r2c_1d(fft->insize, fft->in, fft->cfreq,
+	    FFTW_ESTIMATE); //TODO use FFTW_MEASURE
 
     DECDBG;
     return fft;
 }
 
-
-
-
-
-
-void fft_destroy(tmp_fft *fft)
+void fft_destroy(fft_cache *fft)
 {
     /* free */
-    free(fft->in);
-    free(fft->cfreq);
-    free(fft->afreq);
+    fftw_free(fft->in);
+    fftw_free(fft->cfreq);
+    fftw_free(fft->afreq);
+    fftw_free(fft->pfreq);
     fftw_destroy_plan(fft->plan);
-    fftw_free(fft->data);
     fftw_cleanup();
     free(fft);
 }
@@ -83,50 +91,43 @@ void fft_destroy(tmp_fft *fft)
 
 /***** get elements *****/
 
-double *fft_inptr(tmp_fft *fft)
+double *fft_inptr(fft_cache *fft)
 {
     return fft->in;
 }
 
-static int get_fftsize(tmp_fft *fft)
-{
-    return fft->freqsize;
-}
-
 
 #ifdef USE_FFTW3
-static double *get_fft_fftw3(tmp_fft *fft)
+static void get_fft_fftw3(fft_cache *fft)
 {
     INCDBG;
-    int setsize = fft->size;
+    int insize = fft->insize;
+    int fftsize = fft->fftsize;
     int freqsize = fft->freqsize;
-    double *afreq = fft->afreq;
-
     int i;
+    double const sqrt_insize = sqrt(insize);
 
 
     /* fft */
     DBG("Executing the plan...\n");
     fftw_execute(fft->plan);
 
-    /* convert to real freqs */
-    for (i = 0; (i < freqsize) && (i < setsize/2 + 1); i++)
-	afreq[i] = cabs(fft->data[i]) / sqrt(setsize);
-    while (i < freqsize)
-	afreq[i++] = 0.0;
+    /* scale */
+    for (i = 0; (i < freqsize) && (i < fftsize); i++)
+	fft->cfreq[i] = fft->cfreq[i] / sqrt_insize;
+    while(i < freqsize)
+	fft->cfreq[i++] = 0.0;
 
     DECDBG;
-    return afreq;
 }
 #else
-static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
+static void get_fft_intg(fft_cache *fft, double const df, double const dt)
 {
     INCDBG;
-    int setsize = fft->size;
+    int insize = fft->insize;
     double *in = fft->in;
     complex double *cfreq = fft->cfreq;
     int freqsize = fft->freqsize;
-    double *afreq = fft->afreq;
 
     int i, j;
 
@@ -137,25 +138,20 @@ static double *get_fft_intg(tmp_fft *fft, double const df, double const dt)
     /* calculate amplitude of each frequency */
     for (i = 0; i < freqsize; i++) {
 	cfreq[i] = 0.0;
-	for (j = 0; j < setsize; j++) {
+	for (j = 0; j < insize; j++) {
 	    cfreq[i] += cexp(m_2piI_df_dt * i * j) * in[j];
 	}
+	cfreq[i] *= m_1_sqrt_2pi_dt;
     }
 
-    /* convert to real freqs */
-    for (i = 0; i < freqsize; i++)
-	afreq[i] = cabs(cfreq[i] * m_1_sqrt_2pi_dt);
-
-
     DECDBG;
-    return afreq;
 }
 #endif
 
 
 /****** calculate frequency *****/
 
-double get_frequency(tmp_fft *fft, double samplerate)
+double get_frequency(fft_cache *fft, double samplerate)
 {
     INCDBG;
 
@@ -168,14 +164,25 @@ double get_frequency(tmp_fft *fft, double samplerate)
 
 
 #   ifdef USE_FFTW3
-    double const df = samplerate / (double)fft->size;
-    double * const afreq = get_fft_fftw3(fft);
+    double const df = samplerate / (double)fft->insize;
+    get_fft_fftw3(fft);
 #   else
-    double const df = 10.0;
-    double * const afreq = get_fft_intg(fft, df, dt);
+    //double const df = 10.0;
+    double const df = samplerate / (double)fft->insize;
+    get_fft_intg(fft, df, dt);
 #   endif
 
-    int const freqsize = get_fftsize(fft);
+    int const freqsize = fft->freqsize;
+    fftw_complex * const cfreq = fft->cfreq;
+    double * const afreq = fft->afreq;
+    double * const pfreq = fft->pfreq;
+
+    /* convert to real freqs and real phase shifts */
+    for (i = 0; i < freqsize; i++) {
+	afreq[i] = cabs(cfreq[i]);
+	pfreq[i] = asin(cimag(cfreq[i]) / afreq[i]);
+    }
+
 
 #   ifdef DEBUG
     static int n = 0;
@@ -241,7 +248,7 @@ double get_frequency(tmp_fft *fft, double samplerate)
     avg2 *= df * df;
     freqstddev = sqrt(avg2 - avg * avg);
     DBG("%3d (%.2lf sec): freq = %.2lf +- %5.2lf (mass = %.2le, stddev = %.2le)\n",
-	    n, n * dt * fft->size, avg, freqstddev, mass, stddev);
+	    n, n * dt * fft->insize, avg, freqstddev, mass, stddev);
 
     DECDBG;
     return avg;

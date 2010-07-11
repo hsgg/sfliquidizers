@@ -95,7 +95,7 @@ int main (int argc, char *argv[])
     char *lastnote = NULL;
     int duration = 0;
     FILE *lilyfile = NULL;
-    tmp_fft *fft;
+    fft_cache *fft;
     int metronome = 87;
 
 
