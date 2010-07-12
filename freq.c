@@ -98,7 +98,7 @@ double *fft_inptr(fft_cache *fft)
 
 
 #ifdef USE_FFTW3
-static void get_fft_fftw3(fft_cache *fft)
+static void get_fft_fftw3(fft_cache *fft, double const df, double const dt)
 {
     INCDBG;
     int insize = fft->insize;
@@ -160,22 +160,21 @@ double get_frequency(fft_cache *fft, double samplerate)
     double avg, avg2, mass, stddev, freqstddev;
     int i, j, k;
 
+    void (*get_fft)(fft_cache *fft, double const df, double const dt);
+    double const df = samplerate / (double)fft->insize;
     double const dt = 1.0 / (double)samplerate;
-
-
-#   ifdef USE_FFTW3
-    double const df = samplerate / (double)fft->insize;
-    get_fft_fftw3(fft);
-#   else
-    //double const df = 10.0;
-    double const df = samplerate / (double)fft->insize;
-    get_fft_intg(fft, df, dt);
-#   endif
-
     int const freqsize = fft->freqsize;
     fftw_complex * const cfreq = fft->cfreq;
     double * const afreq = fft->afreq;
     double * const pfreq = fft->pfreq;
+#   ifdef USE_FFTW3
+    get_fft = get_fft_fftw3;
+#   else
+    get_fft = get_fft_intg;
+#   endif
+
+    get_fft(fft, df, dt);
+
 
     /* convert to real freqs and real phase shifts */
     for (i = 0; i < freqsize; i++) {
