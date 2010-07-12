@@ -188,10 +188,13 @@ double get_frequency(fft_cache *fft, double samplerate)
     static int n = 0;
     n++;
     char *filename = print2string(NULL, "fft/fft%4.4d", n);
+    char *phasename = print2string(NULL, "fft/phase%4.4d", n);
     if (access("fft", W_OK) != 0)
 	mkdir("fft", 0777);
     write_to_file(filename, freqsize, afreq, df, 0);
+    write_to_file(phasename, freqsize, pfreq, df, 0);
     free(filename);
+    free(phasename);
 #   endif
 
 
