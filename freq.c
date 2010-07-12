@@ -148,6 +148,17 @@ static void get_fft_intg(fft_cache *fft, double const df, double const dt)
 }
 #endif
 
+/* convert to real freqs and real phase shifts */
+static real_fft(int const freqsize, fftw_complex const*const cfreq,
+	double *const afreq, double *const pfreq)
+{
+    int i;
+    for (i = 0; i < freqsize; i++) {
+	afreq[i] = cabs(cfreq[i]);
+	pfreq[i] = asin(cimag(cfreq[i]) / afreq[i]);
+    }
+}
+
 
 /****** calculate frequency *****/
 
@@ -175,12 +186,7 @@ double get_frequency(fft_cache *fft, double samplerate)
 
     get_fft(fft, df, dt);
 
-
-    /* convert to real freqs and real phase shifts */
-    for (i = 0; i < freqsize; i++) {
-	afreq[i] = cabs(cfreq[i]);
-	pfreq[i] = asin(cimag(cfreq[i]) / afreq[i]);
-    }
+    real_fft(freqsize, cfreq, afreq, pfreq);
 
 
 #   ifdef DEBUG
