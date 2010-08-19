@@ -149,7 +149,7 @@ static void get_fft_intg(fft_cache *fft, double const df, double const dt)
 #endif
 
 /* convert to real freqs and real phase shifts */
-static real_fft(int const freqsize, fftw_complex const*const cfreq,
+static void real_fft(int const freqsize, fftw_complex const*const cfreq,
 	double *const afreq, double *const pfreq)
 {
     int i;
@@ -218,7 +218,7 @@ double get_frequency(fft_cache *fft, double samplerate)
     DECDBG;
 
 
-    /* first maximum above 2 * stddev */
+    /* first maximum above sigma * stddev */
     mass = 0.0;
     i = 0;
     while (i < freqsize) {
@@ -243,7 +243,7 @@ double get_frequency(fft_cache *fft, double samplerate)
     mass = 0.0;
     INCDBG;
     for (i = j + 1; i < k; i++) {
-	register double const weight = afreq[i];
+	double const weight = afreq[i];
 	DBG("Using in average: %lf (%lf)\n", i * df, afreq[i]);
 	avg += weight * i;
 	avg2 += weight * i * i;
