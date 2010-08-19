@@ -1,9 +1,9 @@
-CC = gcc
 CFLAGS = -g -Wall -Werror -O2 -mfpmath=sse
-LDFLAGS = -lsndfile
+LDFLAGS = -Wl,--as-needed
+LDLIBS = -lsndfile
 
 CFLAGS += -DUSE_FFTW3
-LDFLAGS += -lfftw3
+LDLIBS += -lfftw3
 
 PROG = music2lily
 
