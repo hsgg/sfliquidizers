@@ -18,6 +18,7 @@
 
 void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INFO wavinfo)
 {
+    wavinfo.format = SF_FORMAT_AU | SF_FORMAT_PCM_16;
     SNDFILE *file = sf_open(filename, SFM_WRITE, &wavinfo);
     int i, n;
     double *synth = mymalloc(setsize * sizeof(double));
@@ -215,7 +216,7 @@ int main (int argc, char *argv[])
     write_histogram("durs_histo.dat", j, lengths, 5, get_maximalmax(&durs));
 
     /* synthesize frequencies */
-    synthesize("synth.wav", freqs, numfreqs, setsize, wavinfo);
+    synthesize("synth.au", freqs, numfreqs, setsize, wavinfo);
 
     /* free resources, close files */
     if ((status = sf_close(file)) != 0) {
