@@ -1,9 +1,12 @@
-CFLAGS = -g -Wall -Werror -O2 -mfpmath=sse
-LDFLAGS = -Wl,--as-needed
-LDLIBS = -lsndfile
+CFLAGS := -g -Wall -Werror -O2 -mfpmath=sse
+LDFLAGS := -Wl,--as-needed
+LDLIBS :=
 
-CFLAGS += -DUSE_FFTW3
-LDLIBS += -lfftw3
+CFLAGS += $(shell pkg-config --cflags sndfile)
+LDLIBS += $(shell pkg-config --libs sndfile)
+
+CFLAGS += $(shell pkg-config --cflags fftw3) -DUSE_FFTW3
+LDLIBS += $(shell pkg-config --libs fftw3)
 
 PROG = music2lily
 
