@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <err.h>
 
 #include "libc.h"
 
@@ -8,28 +9,22 @@
 void *mycalloc(size_t nmemb, size_t size)
 {
     void *result = calloc(nmemb, size);
-    if (!result) {
-        printf("mycalloc() failed!\n");
-        exit(-2);
-    }
+    if (!result)
+        err(-2, "mycalloc() failed!");
     return result;
 }
 void *mymalloc(size_t size)
 {
     void *result = malloc(size);
-    if (!result) {
-        printf("mymalloc() failed!\n");
-        exit(-2);
-    }
+    if (!result)
+        err(-2, "mymalloc() failed!");
     return result;
 }
 void *myrealloc(void *ptr, size_t size)
 {
     void *result = realloc(ptr, size);
-    if (!result) {
-        printf("myrealloc() failed!\n");
-        exit(-2);
-    }
+    if (!result)
+        err(-2, "myrealloc() failed!");
     return result;
 }
 
