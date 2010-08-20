@@ -8,7 +8,7 @@ LDLIBS += $(shell pkg-config --libs sndfile)
 CFLAGS += $(shell pkg-config --cflags fftw3) -DUSE_FFTW3
 LDLIBS += $(shell pkg-config --libs fftw3)
 
-PROG = music2lily
+PROGS = music2lily synth
 
 DEPFILE = .depend
 PROGDEPFILE = .progdepend
@@ -16,7 +16,7 @@ PROGDEPFILE = .progdepend
 
 # all
 .PHONY: all
-all: $(PROGDEPFILE) $(PROG)
+all: $(PROGDEPFILE) $(PROGS)
 
 
 # dependecies
@@ -36,7 +36,7 @@ $(PROGDEPFILE): $(DEPFILE)
 .PHONY: clean
 clean:
 	rm -f *.o
-	rm -f $(PROG)
+	rm -f $(PROGS)
 	rm -f $(DEPFILE) $(PROGDEPFILE)
 
 .PHONY: realclean
