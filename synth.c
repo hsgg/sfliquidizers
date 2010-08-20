@@ -97,11 +97,11 @@ int main(int argc, char *argv[])
         setsize = dur * auinfo.samplerate;
         synth = myrealloc(synth, setsize * sizeof(*synth));
         for (i = 0; i < setsize; i++)
-            synth[i] = 0.5 * sin(f * i + phase);
+            synth[i] = amp * sin(f * i + phase);
 
         if (setsize >= 2) {
-            y1 = synth[setsize - 2];
-            y2 = synth[setsize - 1];
+            y1 = 0.5 * sin(f * (setsize - 2) + phase);
+            y2 = 0.5 * sin(f * (setsize - 1) + phase);
         }
 
         /* write to file */
