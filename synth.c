@@ -35,11 +35,8 @@ int main(int argc, char *argv[])
     int setsize;
     double *synth = NULL;
     double k = 2.0 * M_PI / auinfo.samplerate;
-    double phase = 0.0;
-    double y1 = 0.0;
-    double y2 = 0.0;
-    double dt = k / (2.0 * M_PI);
     double f = 0.0;
+    double phase = 0.0;
 
 
     SNDFILE *file = sf_open_fd(fileno(stdout), SFM_WRITE, &auinfo, SF_TRUE);
@@ -87,23 +84,14 @@ int main(int argc, char *argv[])
 	/* synthesize */
         f = k * freq;
 
-        phase = asin(y2) - f * (-1);
-
-        double yprime = (y2 - y1) / dt;
-        double synprime = f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
-        if (abs(yprime - synprime) > 0.01 * f / dt) {
-            phase = M_PI - phase - f * 2 * (-1);
-        }
-
         setsize = dur * auinfo.samplerate;
         synth = myrealloc(synth, setsize * sizeof(*synth));
+
         for (i = 0; i < setsize; i++)
             synth[i] = amp * sin(f * i + phase);
 
-        if (setsize >= 2) {
-            y1 = sin(f * (setsize - 2) + phase);
-            y2 = sin(f * (setsize - 1) + phase);
-        }
+        phase = f * setsize + phase;
+        phase -= trunc(phase / (2 * M_PI)) * 2 * M_PI;
 
         /* write to file */
         if (sf_write_double(file, synth, setsize) != setsize)
