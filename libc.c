@@ -78,3 +78,22 @@ char *print2string(char *dest, char *fmt, ...)
     free(dest);
     return newdest;
 }
+
+
+/*
+ * mygetline():
+ *      Do the same as getline(3), except strip the trailing newline
+ *      character.
+ */
+ssize_t mygetline(char **lineptr, size_t *n, FILE *stream)
+{
+    ssize_t k = getline(lineptr, n, stream);
+
+    if (k < 1)
+        return k;
+
+    if ((*lineptr)[k - 1] == '\n')
+        (*lineptr)[--k] = '\0';
+
+    return k;
+}

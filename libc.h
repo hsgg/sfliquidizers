@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
@@ -11,3 +12,6 @@ char *realloc_strcpy(char **dest, char *src);
 char *realloc_strcat(char **dest, char *src);
 char *print2string(char *dest, char *fmt, ...)
     __attribute__((format(printf,2,3)));
+
+/* mygetline() */
+ssize_t mygetline(char **lineptr, size_t *n, FILE *stream);

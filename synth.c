@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     char *line = NULL;
     size_t maxlinelen = 0;
     int lineno = 0;
-    while (getline(&line, &maxlinelen, stdin) != -1) {
+    while (mygetline(&line, &maxlinelen, stdin) != -1) {
         lineno++;
 
         char *currfreq, *nextfreq = line;
