@@ -1,4 +1,3 @@
-/* vim: set sts=4 sw=4 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -119,3 +118,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+/* vim: set sts=4 sw=4 et : */
