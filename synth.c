@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	/* synthesize */
         f = k * freq;
 
-        setsize = dur * auinfo.samplerate;
+        setsize = round(dur * auinfo.samplerate);
         synth = myrealloc(synth, setsize * sizeof(*synth));
 
         for (i = 0; i < setsize; i++)
