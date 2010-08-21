@@ -56,9 +56,9 @@ int main(int argc, char *argv[])
         lineno++;
 
         char *currfreq, *nextfreq = line;
-        while ((currfreq = strsep(&nextfreq, ";")) != NULL) {
+        while ((currfreq = strsep(&nextfreq, ";\n")) != NULL) {
             char *currspec, *nextspec = currfreq;
-            while ((currspec = strsep(&nextspec, " \t;")) != NULL) {
+            while ((currspec = strsep(&nextspec, " \t;\n")) != NULL) {
                 char *name = strsep(&currspec, "=");
                 char *value = currspec;
                 DBG("Parsing specification \"%s\"=\"%s\"\n", name, value);
@@ -72,6 +72,8 @@ int main(int argc, char *argv[])
                 case 'a':
                     amp = atof(value);
                     break;
+		case '\0':
+		    break;
                 default:
                     DBG("WARNING on line %d: Unrecognized specification "
                             "%s=%s\n", lineno, name, value);
@@ -80,7 +82,6 @@ int main(int argc, char *argv[])
 
             /* TODO: Parse all of the input tones. That means re-thinking the
              * the mathematics for converting frequencies to sine-waves. */
-            break;
         }
 
 	/* synthesize */
