@@ -117,9 +117,9 @@ int debugging_msg_(char const * const msg, ...)
   va_copy(ap, ag);
 
   if (va_arg(ap, char *))
-    retval = vfprintf(stdout, msg, ag);
+    retval = vfprintf(stderr, msg, ag);
   else
-    retval = vfprintf(stdout, msg + strlen("%s:"), ap);
+    retval = vfprintf(stderr, msg + strlen("%s:"), ap);
 
   va_end(ap);
   va_end(ag);
