@@ -54,6 +54,8 @@ int main(int argc, char *argv[])
     int lineno = 0;
     while (mygetline(&line, &maxlinelen, stdin) != -1) {
         lineno++;
+        if (line[0] == '#')
+            continue;
 
         char *currfreq, *nextfreq = line;
         while ((currfreq = strsep(&nextfreq, ";\n")) != NULL) {
