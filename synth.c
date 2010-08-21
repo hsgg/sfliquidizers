@@ -61,7 +61,6 @@ int main(int argc, char *argv[])
             while ((currspec = strsep(&nextspec, " \t;\n")) != NULL) {
                 char *name = strsep(&currspec, "=");
                 char *value = currspec;
-                DBG("Parsing specification \"%s\"=\"%s\"\n", name, value);
                 switch (*name) {
                 case 'd':
                     dur = atof(value);
@@ -75,13 +74,13 @@ int main(int argc, char *argv[])
 		case '\0':
 		    break;
                 default:
-                    DBG("WARNING on line %d: Unrecognized specification "
-                            "%s=%s\n", lineno, name, value);
+                    warnx("WARNING on line %d: Unrecognized specification "
+                            "%s=%s", lineno, name, value);
                 }
             }
 
-            /* TODO: Parse all of the input tones. That means re-thinking the
-             * the mathematics for converting frequencies to sine-waves. */
+            /* TODO: Use all of the input tones. That means re-thinking the
+             * mathematics for converting frequencies to sine-waves. */
         }
 
 	/* synthesize */

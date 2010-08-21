@@ -182,7 +182,6 @@ int main (int argc, char *argv[])
 
 	f = freqs[i++] = get_frequency(fft, wavinfo.samplerate);
 
-	/*note = get_str(&fns, f);*/
 	if (!(note = get_str(&fns, f)))
 	    note = lastnote;
 
