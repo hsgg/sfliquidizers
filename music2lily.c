@@ -12,71 +12,6 @@
 #include "fpDEBUG.h"
 
 
-
-/********* synth ***********/
-
-void synthesize(char *filename, double *freqs, int numfreqs, int setsize, SF_INFO wavinfo)
-{
-    wavinfo.format = SF_FORMAT_AU | SF_FORMAT_PCM_16;
-    SNDFILE *file = sf_open(filename, SFM_WRITE, &wavinfo);
-    int i, n;
-    double *synth = mymalloc(setsize * sizeof(double));
-    double k = 2.0 * M_PI / wavinfo.samplerate;
-    double phase = 0.0;
-    double y1 = 0.0;
-    double y2 = 0.0;
-    double dt = k / (2.0 * M_PI);
-    double f = 0.0;
-
-    DBG("Synthesizing to file \"%s\"...\n", filename);
-
-    /* checks */
-    if (wavinfo.channels != 1) {
-	printf("Error: Number of channels must be 1, currently.\n");
-	exit(7);
-    }
-    if (!file) {
-	printf("Could not open file \"%s\".\n", filename);
-	exit(2);
-    }
-
-    /* synthesize */
-    for (n = 0; n < numfreqs; n++) {
-	f = k * freqs[n];
-
-	phase = asin(2.0 * y2) - f * (-1);
-
-	double yprime = (y2 - y1) / dt;
-	double synprime = 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
-	if (abs(yprime - synprime) > 0.01 * f / dt) {
-	    phase = M_PI - phase - f * 2 * (-1);
-	}
-
-	for (i = 0; i < setsize; i++)
-	    synth[i] = 0.5 * sin(f * i + phase);
-
-	if (setsize >= 2) {
-	    y1 = synth[setsize - 2];
-	    y2 = synth[setsize - 1];
-	}
-
-	/* write to file */
-	if (sf_write_double(file, synth, setsize) != setsize) {
-	    printf("Couldn't write all frames! Don't know why.\n");
-	    exit(8);
-	}
-    }
-
-    /* free */
-    if (sf_close(file) != 0) {
-	printf("Error closing file.\n");
-	exit(9);
-    }
-    free(synth);
-}
-
-
-/****************** main ****************/
 int main (int argc, char *argv[])
 {
     int status = 0;
@@ -181,6 +116,9 @@ int main (int argc, char *argv[])
 
 	f = freqs[i++] = get_frequency(fft, wavinfo.samplerate);
 
+        double const d = setsize / (double)wavinfo.samplerate;
+        printf("d=%lf f=%lf a=0.5\n", d, f);
+
 	if (!(note = get_str(&fns, f)))
 	    note = lastnote;
 
@@ -213,8 +151,6 @@ int main (int argc, char *argv[])
     write_to_file("durs.dat", j, lengths, 1, 0);
     write_histogram("durs_histo.dat", j, lengths, 5, get_maximalmax(&durs));
 
-    /* synthesize frequencies */
-    synthesize("synth.au", freqs, numfreqs, setsize, wavinfo);
 
     /* free resources, close files */
     if ((status = sf_close(file)) != 0) {
