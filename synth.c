@@ -86,10 +86,10 @@ int main(int argc, char *argv[])
 	/* synthesize */
         f = k * freq;
 
-        phase = asin(2.0 * y2) - f * (-1);
+        phase = asin(y2) - f * (-1);
 
         double yprime = (y2 - y1) / dt;
-        double synprime = 0.5 * f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
+        double synprime = f / dt * cos(f * (-1.0 - 2.0) / 2.0 + phase);
         if (abs(yprime - synprime) > 0.01 * f / dt) {
             phase = M_PI - phase - f * 2 * (-1);
         }
@@ -100,8 +100,8 @@ int main(int argc, char *argv[])
             synth[i] = amp * sin(f * i + phase);
 
         if (setsize >= 2) {
-            y1 = 0.5 * sin(f * (setsize - 2) + phase);
-            y2 = 0.5 * sin(f * (setsize - 1) + phase);
+            y1 = sin(f * (setsize - 2) + phase);
+            y2 = sin(f * (setsize - 1) + phase);
         }
 
         /* write to file */
