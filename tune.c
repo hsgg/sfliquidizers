@@ -24,7 +24,7 @@ MappingArray fns_tune()
 	{ 550, 555, 561, "cis''" },
 	{ 585, 587, 588, "d''" }
     }; */
-    Mapping freqsandnotes[] = {
+    static Mapping const freqsandnotes[] = {
 	{ 291, 297, 306, "d'" },
 	{ 327, 336, 344, "e'" },
 	{ 368, 377, 388, "fis'" },
@@ -46,8 +46,6 @@ MappingArray fns_tune()
     int i = fns.size;
     while (i--) {
 	fns.m[i] = freqsandnotes[i];
-	/* The string needs to be copied explicitly: */
-	fns.m[i].note = realloc_strcpy(NULL, freqsandnotes[i].note);
 	print_mapping(&fns.m[i]);
     }
 
@@ -58,7 +56,7 @@ MappingArray fns_tune()
 
 MappingArray dur_tune()
 {
-    Mapping dursanddurs[] = {
+    static Mapping const dursanddurs[] = {
 	{ 82, 92, 120, "2" },
 	{ 36, 46, 65, "4" },
 	{ 18, 23, 35, "8" },
@@ -69,24 +67,27 @@ MappingArray dur_tune()
     durs.size = sizeof(dursanddurs) / sizeof(Mapping);
     durs.m = mymalloc(durs.size * sizeof(Mapping));
 
+    double const samplerate = 44100.0;
+    double const setsize = 1.0/440.0*6.0 * samplerate;
+    double const unit = setsize / samplerate;
     int i = durs.size;
     while (i--) {
 	durs.m[i] = dursanddurs[i];
-	/* The string needs to be copied explicitly: */
-	durs.m[i].note = realloc_strcpy(NULL, dursanddurs[i].note);
+	durs.m[i].min *= unit;
+	durs.m[i].avg *= unit;
+	durs.m[i].max *= unit;
     }
 
     return durs;
 }
 
 /* dur_tune_metronome():
- * 	- unit: The length of an elementary unit.
  * 	- quarter: The number of quarter notes per minute (like on a metonome). */
-MappingArray dur_tune_metronome(double const unit, double quarter)
+MappingArray dur_tune_metronome(double quarter)
 {
     MappingArray durs = {};
     int length = 16;
-    int lowermax;
+    double lowermax;
 
     DBG("Calculating lengths with metronome mark %d...\n", (int)quarter);
     INCDBG;
@@ -94,21 +95,21 @@ MappingArray dur_tune_metronome(double const unit, double quarter)
     /* Length of a quarter note in seconds */
     quarter = 60.0 / quarter;
 
-    lowermax = 4.0 / length * quarter / unit * 0.75;
+    lowermax = 4.0 / length * quarter * 0.75;
 
     do {
 	int i = durs.size;
 	durs.size += 2;
 	durs.m = myrealloc(durs.m, durs.size * sizeof(Mapping));
 
-	durs.m[i].avg = 4.0 / length * quarter / unit;
+	durs.m[i].avg = 4.0 / length * quarter;
 	durs.m[i].min = lowermax;
 	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
 	durs.m[i].note = print2string(NULL, "%d", length);
 	print_mapping(&durs.m[i]);
 
 	i++;
-	durs.m[i].avg = 1.5 * 4.0 / length * quarter / unit;
+	durs.m[i].avg = 1.5 * 4.0 / length * quarter;
 	durs.m[i].min = lowermax;
 	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
 	durs.m[i].note = print2string(NULL, "%d.", length);

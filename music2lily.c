@@ -94,8 +94,8 @@ int main (int argc, char *argv[])
     MappingArray fns = fns_tune();
 
     /* durations */
-    MappingArray durs = dur_tune_metronome(setsize / (double)wavinfo.samplerate,
-	    metronome);
+    double const unit = setsize / (double)wavinfo.samplerate;
+    MappingArray durs = dur_tune_metronome(metronome);
 
 
     /* read music */
@@ -119,7 +119,7 @@ int main (int argc, char *argv[])
 	    duration++;
 	} else {
 	    /* print last note */
-	    print_note(&durs, lilyfile, lastnote, duration);
+	    print_note(&durs, lilyfile, lastnote, duration * unit);
 	    lengths[j++] = duration;
 	    duration = 0;
 	}
@@ -128,7 +128,7 @@ int main (int argc, char *argv[])
     /* print last note */
     if (lastnote != note)
 	errx(6, "Darn, I don't understand this algorithm!\n");
-    print_note(&durs, lilyfile, lastnote, duration);
+    print_note(&durs, lilyfile, lastnote, duration * unit);
     lengths[j++] = duration;
     write_lilytail(lilyfile, metronome);
 

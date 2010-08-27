@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <err.h>
 #include "libc.h"
 #include "write_array.h"
 #include "fpDEBUG.h"
@@ -16,7 +17,7 @@ void write_to_file(char *filename, int len, double *values, double xfactor, doub
     DBG("Writing to file \"%s\" with xfactor %lf and xoffset %lf...\n", filename, xfactor, xoffset);
 
     if (!file) {
-	printf("Could not open %s for writing.\n", filename);
+	warnx("Could not open %s for writing.\n", filename);
 	exit(2);
     }
 
@@ -47,9 +48,11 @@ void write_histogram(char *filename, int len, double *values, double binsize, do
 
     /* calculate histogram */
     for (i = 0; i < len; i++) {
-	register int const bin = values[i] / binsize;
-	if (bin >= histsize)
-	    printf("Ignoring too high value %lf in histogram!\n", values[i]);
+	int const bin = values[i] / binsize;
+	if (bin >= histsize) {
+	    warnx("Ignoring too high value %lf in histogram!\n", values[i]);
+	    continue;
+	}
 	histo[bin]++;
     }
 

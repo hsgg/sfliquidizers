@@ -3,9 +3,9 @@
 
 
 typedef struct {
-    int min;
+    double min;
     double avg;
-    int max;
+    double max;
     char *note;
 } Mapping;
 
@@ -17,7 +17,7 @@ typedef struct {
 
 MappingArray fns_tune();
 MappingArray dur_tune();
-MappingArray dur_tune_metronome(double const unit, double quarter);
+MappingArray dur_tune_metronome(double quarter);
 
 char *get_str(MappingArray *map, double value);
 int get_maximalmax(MappingArray *map);

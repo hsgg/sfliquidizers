@@ -18,15 +18,15 @@ void write_lilyhead(FILE *lilyfile,
 }
 
 
-void print_note(MappingArray *durs, FILE *lilyfile, char *note, int duration)
+void print_note(MappingArray *durs, FILE *lilyfile, char *note, double duration)
 {
     char *dur = get_str(durs, duration);
 
     if (dur && note) {
-	DBG(">>> dur = %d >>> Printing %s%s\n", duration, note, dur);
+	DBG(">>> dur = %lf >>> Printing %s%s\n", duration, note, dur);
 	fprintf(lilyfile, "%s%s ", note, dur);
     } else {
-	DBG("<<< dur = %d <<< NOT printing %s%s\n", duration, note, dur);
+	DBG("<<< dur = %lf <<< NOT printing %s%s\n", duration, note, dur);
     }
 }
 
