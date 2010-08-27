@@ -29,13 +29,10 @@ int main (int argc, char *argv[])
     fft_cache *fft;
 
 
-    if (argc != 2)
-	errx(1, "Usage: %s <sndfile>\n", argv[0]);
-
     /* open file */
-    file = sf_open(argv[1], SFM_READ, &wavinfo);
+    file = sf_open_fd(fileno(stdin), SFM_READ, &wavinfo, SF_TRUE);
     if (!file)
-	err(2, "Could not open file \"%s\".\n", argv[1]);
+	err(2, "Could not open stdin.\n");
 
     /* accounting data */
     DBG("filename: %s\n", argv[1]);
