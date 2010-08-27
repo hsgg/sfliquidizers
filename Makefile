@@ -8,7 +8,7 @@ LDLIBS += $(shell pkg-config --libs sndfile)
 CFLAGS += $(shell pkg-config --cflags fftw3) -DUSE_FFTW3
 LDLIBS += $(shell pkg-config --libs fftw3)
 
-PROGS = music2lily synth lilyfy
+PROGS = frequetize synth lilyfy
 
 DEPFILE = .depend
 PROGDEPFILE = .progdepend
