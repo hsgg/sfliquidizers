@@ -16,7 +16,7 @@
 int main (int argc, char *argv[])
 {
     int status = 0;
-    int i, j;
+    int i;
     SNDFILE *file = NULL;
     SF_INFO wavinfo = {};
     int setsize = 0;
@@ -25,27 +25,17 @@ int main (int argc, char *argv[])
     double *music = NULL;
     int numfreqs = 0;
     double *freqs = NULL;
-    double *lengths = NULL;
     double f;
-    char *note = NULL;
-    char *lastnote = NULL;
-    int duration = 0;
-    FILE *lilyfile = NULL;
     fft_cache *fft;
-    int metronome = 87;
 
 
-    if (argc != 3)
-	errx(1, "Usage: %s <sndfile> <lilyfile>\n", argv[0]);
+    if (argc != 2)
+	errx(1, "Usage: %s <sndfile>\n", argv[0]);
 
     /* open file */
     file = sf_open(argv[1], SFM_READ, &wavinfo);
     if (!file)
 	err(2, "Could not open file \"%s\".\n", argv[1]);
-
-    lilyfile = fopen(argv[2], "w");
-    if (!lilyfile)
-	err(5, "Could not open output file \"%s\".\n", argv[2]);
 
     /* accounting data */
     DBG("filename: %s\n", argv[1]);
@@ -85,24 +75,13 @@ int main (int argc, char *argv[])
 	music = fft_inptr(fft);
 	numfreqs = wavinfo.frames / setsize + 1;
 	freqs = mymalloc(numfreqs * sizeof(double));
-	lengths = mymalloc(numfreqs * sizeof(double));
-	DBG("metronome = %d\n", metronome);
 	DECDBG;
     }
-
-    /* frequencies */
-    MappingArray fns = fns_tune();
-
-    /* durations */
-    double const unit = setsize / (double)wavinfo.samplerate;
-    MappingArray durs = dur_tune_metronome(metronome);
 
 
     /* read music */
     DBG("Analysing music...\n");
     i = 0;
-    j = 0;
-    write_lilyhead(lilyfile, argv[1]);
     frames = setsize;
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
@@ -111,34 +90,13 @@ int main (int argc, char *argv[])
 
         double const d = setsize / (double)wavinfo.samplerate;
         printf("d=%lf f=%lf a=0.5\n", d, f);
-
-	if (!(note = get_str(&fns, f)))
-	    note = lastnote;
-
-	if ((note == lastnote) || (duration == 0)) {
-	    duration++;
-	} else {
-	    /* print last note */
-	    print_note(&durs, lilyfile, lastnote, duration * unit);
-	    lengths[j++] = duration;
-	    duration = 0;
-	}
-	lastnote = note;
     }
-    /* print last note */
-    if (lastnote != note)
-	errx(6, "Darn, I don't understand this algorithm!\n");
-    print_note(&durs, lilyfile, lastnote, duration * unit);
-    lengths[j++] = duration;
-    write_lilytail(lilyfile, metronome);
 
     /* save detected frequencies and durations */
     if (i != numfreqs)
 	errx(7, "Darn, I really don't understand this algorithm!\n");
     write_to_file("freqs.dat", numfreqs, freqs,
 	    setsize / (double)wavinfo.samplerate, 0.0);
-    write_to_file("durs.dat", j, lengths, 1, 0);
-    write_histogram("durs_histo.dat", j, lengths, 5, get_maximalmax(&durs));
 
 
     /* free resources, close files */
@@ -146,7 +104,6 @@ int main (int argc, char *argv[])
 	err(status, "Error closing file.\n");
     fft_destroy(fft);
     free(freqs);
-    fclose(lilyfile);
 
     return status;
 }
