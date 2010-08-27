@@ -4,11 +4,18 @@
 #include "fpDEBUG.h"
 
 
-static void print_mapping(Mapping *m)
+static void print_mapping(Mapping *m, char const c)
 {
-    DBG("%p-> %-6s = %4d < %7.2lf < %4d, \t range %2d %+6.2lf %+6.2lf\n", m,
-	    m->note, m->min, m->avg, m->max,
-	    m->max - m->min, m->min - m->avg, m->max - m->avg);
+    if (c == 'f')
+        DBG("%p-> %-4s = %6.1lf < %6.1lf < %6.1lf, "
+                "range %5.1lf %+5.1lf %+5.1lf\n",
+                m, m->note, m->min, m->avg, m->max,
+                m->max - m->min, m->min - m->avg, m->max - m->avg);
+    else
+        DBG("%p-> %-4s = %6.4lf < %6.4lf < %6.4lf, "
+                "range %5.3lf %+5.3lf %+5.3lf\n",
+                m, m->note, m->min, m->avg, m->max,
+                m->max - m->min, m->min - m->avg, m->max - m->avg);
 }
 
 
@@ -46,7 +53,7 @@ MappingArray fns_tune()
     int i = fns.size;
     while (i--) {
 	fns.m[i] = freqsandnotes[i];
-	print_mapping(&fns.m[i]);
+	print_mapping(&fns.m[i], 'f');
     }
 
     DECDBG;
@@ -106,14 +113,14 @@ MappingArray dur_tune_metronome(double quarter)
 	durs.m[i].min = lowermax;
 	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
 	durs.m[i].note = print2string(NULL, "%d", length);
-	print_mapping(&durs.m[i]);
+	print_mapping(&durs.m[i], 'd');
 
 	i++;
 	durs.m[i].avg = 1.5 * 4.0 / length * quarter;
 	durs.m[i].min = lowermax;
 	durs.m[i].max = lowermax = durs.m[i].avg * 1.10;
 	durs.m[i].note = print2string(NULL, "%d.", length);
-	print_mapping(&durs.m[i]);
+	print_mapping(&durs.m[i], 'd');
     } while ((length /= 2) >= 1);
 
     DECDBG;
@@ -148,7 +155,7 @@ int get_maximalmax(MappingArray *map)
 	Mapping m = map->m[i];
 
 	DBG("%d: max = %d\n", i, max);
-	print_mapping(&m);
+	print_mapping(&m, m.avg > 10 ? 'f' : 'd');
 
 	if (m.min > max)
 	    max = m.min;
