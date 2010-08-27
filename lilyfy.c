@@ -76,8 +76,6 @@ int main (int argc, char *argv[])
 	if (!(note = get_str(&fns, freq)))
 	    note = lastnote;
 
-        DBG("Determined note %s\n", note);
-
 	if ((note == lastnote) || (duration == 0.0)) {
 	    duration += dur;
 	} else {
