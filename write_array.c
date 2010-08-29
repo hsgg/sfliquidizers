@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <err.h>
 #include "libc.h"
 #include "write_array.h"

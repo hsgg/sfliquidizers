@@ -1,13 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <sndfile.h>
 #include <err.h>
 
 #include "libc.h"
-#include "tune.h"
-#include "freq.h"
 #include "lily.h"
 #include "write_array.h"
 #include "fpDEBUG.h"
@@ -15,14 +8,12 @@
 
 int main (int argc, char *argv[])
 {
-    int status = 0;
-    int i, j;
+    int j;
     double *lengths = NULL;
     double dur = 1.0, freq = 440, amp = 0.5;
     char *note = NULL;
     char *lastnote = NULL;
     double duration = 0.0;
-    FILE *lilyfile = stdout;
     int metronome = 87;
 
     if (argc != 2)
@@ -36,9 +27,8 @@ int main (int argc, char *argv[])
 
     /* read music */
     DBG("Analysing music...\n");
-    i = 0;
     j = 0;
-    write_lilyhead(lilyfile, argv[1]);
+    write_lilyhead(stdout, argv[1]);
     char *line = NULL;
     size_t maxlinelen = 0;
     int lineno = 0;
@@ -47,6 +37,7 @@ int main (int argc, char *argv[])
         if (line[0] == '#')
             continue;
 
+        /* TODO: Fix parsing, and merge with synth.c parsing. */
         char *currfreq, *nextfreq = line;
         while ((currfreq = strsep(&nextfreq, ";\n")) != NULL) {
             char *currspec, *nextspec = currfreq;
@@ -70,7 +61,6 @@ int main (int argc, char *argv[])
                             "%s=%s", lineno, name, value);
                 }
             }
-            /* TODO: Fix parsing, and merge with synth.c parsing. */
         }
 
 	if (!(note = get_str(&fns, freq)))
@@ -80,7 +70,7 @@ int main (int argc, char *argv[])
 	    duration += dur;
 	} else {
 	    /* print last note */
-	    print_note(&durs, lilyfile, lastnote, duration);
+	    print_note(&durs, stdout, lastnote, duration);
             lengths = myrealloc(lengths, (j + 1) * sizeof(*lengths));
 	    lengths[j++] = duration;
 	    duration = 0.0;
@@ -90,10 +80,10 @@ int main (int argc, char *argv[])
     /* print last note */
     if (lastnote != note)
 	errx(6, "Darn, I don't understand this algorithm!\n");
-    print_note(&durs, lilyfile, lastnote, duration);
+    print_note(&durs, stdout, lastnote, duration);
     lengths = myrealloc(lengths, (j + 1) * sizeof(*lengths));
     lengths[j++] = duration;
-    write_lilytail(lilyfile, metronome);
+    write_lilytail(stdout, metronome);
 
     /* save detected frequencies and durations */
     write_to_file("durs.dat", j, lengths, 1, 0);
@@ -101,7 +91,7 @@ int main (int argc, char *argv[])
 
     free(lengths);
 
-    return status;
+    return 0;
 }
 
 /* vim: set sts=4 sw=4 et: */

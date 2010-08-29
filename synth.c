@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
-#include <string.h>
 #include <sndfile.h>
 #include <err.h>
 
@@ -9,7 +6,7 @@
 #include "fpDEBUG.h"
 
 /*
- * output format: The output format is a line-oriented format.  Each
+ * input format: The input format is a line-oriented format.  Each
  * line is a semicolon-separated list of the following fields.
  * 	d=<duration> f=<freq> a=<amplitude>;
  * Each field can be specified optionally with deviations, e.g.
@@ -34,8 +31,7 @@ int main(int argc, char *argv[])
     int i;
     int setsize;
     double *synth = NULL;
-    double k = 2.0 * M_PI / auinfo.samplerate;
-    double f = 0.0;
+    double const k = 2.0 * M_PI / auinfo.samplerate;
     double phase = 0.0;
 
 
@@ -82,7 +78,7 @@ int main(int argc, char *argv[])
         }
 
 	/* synthesize */
-        f = k * freq;
+        double f = k * freq;
 
         setsize = round(dur * auinfo.samplerate);
         synth = myrealloc(synth, setsize * sizeof(*synth));

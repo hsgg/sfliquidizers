@@ -1,14 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
 #include <sndfile.h>
 #include <err.h>
 
 #include "libc.h"
-#include "tune.h"
 #include "freq.h"
-#include "lily.h"
 #include "write_array.h"
 #include "fpDEBUG.h"
 
@@ -25,7 +19,6 @@ int main (int argc, char *argv[])
     double *music = NULL;
     int numfreqs = 0;
     double *freqs = NULL;
-    double f;
     fft_cache *fft;
 
 
@@ -83,6 +76,7 @@ int main (int argc, char *argv[])
     while (frames == setsize) {
 	frames = sf_readf_double(file, music, setsize);
 
+        double f;
 	f = freqs[i++] = get_frequency(fft, wavinfo.samplerate);
 
         double const d = setsize / (double)wavinfo.samplerate;
